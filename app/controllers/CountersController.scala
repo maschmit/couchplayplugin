@@ -8,28 +8,30 @@ import play.api.Play.current
 
 import models._
 import repositories.CounterRepositoryComponent
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 trait CountersControllerTrait extends Controller {
   this: CounterRepositoryComponent =>
 
-  def index = Action {
-  	val counters = Cache.getAs[List[Counter]]("counters")
-      .getOrElse(Nil)
-      .map { counter => new CounterWithAggregate(counter, Cache.getAs[Int](counter.name).map(Time(_)).getOrElse(NoTime)) }
-  	Ok(views.html.counters(counterForm, incrementCounterForm, counters)) 
+  def index = Action.async {
+    counterRepository.counters.map(
+      counters => Ok(views.html.counters(counterForm, incrementCounterForm, counters))
+    )
   }
 
-  def addCounter = Action { implicit request =>
+  def addCounter = Action.async { implicit request =>
   	val newCounter = counterForm.bindFromRequest.get
-  	val counters = newCounter :: Cache.getAs[List[Counter]]("counters").getOrElse(Nil)
-  	Cache.set("counters", counters)
-  	Redirect(routes.CountersController.index)
+    counterRepository.add(newCounter).map (
+  	  _ => Redirect(routes.CountersController.index)
+    )
   }
 
-  def incrementCounter(id: String) = Action { implicit request =>
+  def incrementCounter(id: String) = Action.async { implicit request =>
     val increment = incrementCounterForm.bindFromRequest.get
-    Cache.set(id, increment.minutes + Cache.getAs[Int](id).getOrElse(0))
-    Redirect(routes.CountersController.index)
+    counterRepository.increment(CounterId(id), increment).map (
+      _ => Redirect(routes.CountersController.index)
+    )
   }
 
   val counterForm = Form(
@@ -41,7 +43,7 @@ trait CountersControllerTrait extends Controller {
   val incrementCounterForm = Form(
       mapping(
         "minutes" -> number
-      )(CounterIncrement.apply)(CounterIncrement.unapply)
+      )(Time.apply)(Time.unapply)
     )
 }
 

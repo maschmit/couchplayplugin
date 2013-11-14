@@ -1,6 +1,7 @@
 package models
 
 case class Counter(name: String)
+case class CounterId(id: String)
 
 case class CounterWithAggregate(counter: Counter, time: TimeCounter)
 
@@ -14,4 +15,4 @@ case class Time(minutes: Int) extends TimeCounter {
 	override def toString = s"$minutes minutes"
 }
 
-case class CounterIncrement(minutes: Int)
+case class CounterIncrement(counterId: String, minutes: Int)
