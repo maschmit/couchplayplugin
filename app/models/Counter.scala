@@ -3,7 +3,7 @@ package models
 case class Counter(name: String)
 case class CounterId(id: String)
 
-case class CounterWithAggregate(counter: Counter, time: TimeCounter)
+case class CounterWithAggregate(id: String, counter: Counter, time: TimeCounter)
 
 abstract class TimeCounter
 

@@ -4,6 +4,6 @@
 
 Time = @counter.time
 
-@helper.form(action = routes.CountersController.incrementCounter(counter.counter.name)) {
+@helper.form(action = routes.CountersController.incrementCounter(counter.id)) {
     @helper.inputText(incrementCounterForm("minutes"), 'size -> 10)
 }

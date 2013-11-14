@@ -12,7 +12,7 @@ trait CounterRepositoryComponent {
 
   trait CounterRepository {
     def counters: Future[List[CounterWithAggregate]]
-    def add(newCounter: Counter): Future[Unit]
+    def add(newCounter: Counter): Future[CounterId]
     def increment(id: CounterId, increment: Time): Future[Unit]
   }
   
@@ -24,12 +24,13 @@ trait CounterRepositoryComponent {
     	Cache.getAs[List[Counter]]("counters")
 	      .getOrElse(Nil)
 	      .map { counter =>
-	        new CounterWithAggregate(counter, Cache.getAs[Int](counter.name).map(Time(_)).getOrElse(NoTime)) }
+	        new CounterWithAggregate(counter.name, counter, Cache.getAs[Int](counter.name).map(Time(_)).getOrElse(NoTime)) }
 	  }
 
-	def add(newCounter: Counter) = Future {
+	def add(newCounter: Counter): Future[CounterId] = Future {
 	  	val counters = newCounter :: Cache.getAs[List[Counter]]("counters").getOrElse(Nil)
 	  	Cache.set("counters", counters)
+	  	CounterId(newCounter.name)
 	  }
 
   	def increment(id: CounterId, increment: Time) = Future {
