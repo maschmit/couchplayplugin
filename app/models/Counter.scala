@@ -1,6 +1,9 @@
 package models
 
+
+
 case class Counter(name: String)
+
 case class CounterId(id: String)
 
 case class CounterWithAggregate(id: String, counter: Counter, time: TimeCounter)

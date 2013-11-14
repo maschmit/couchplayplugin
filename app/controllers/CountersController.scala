@@ -48,5 +48,5 @@ trait CountersControllerTrait extends Controller {
 }
 
 object CountersController extends CountersControllerTrait with CounterRepositoryComponent {
-  val counterRepository = new CacheCounterRepository
+  val counterRepository = new CouchCounterRepository
 }
