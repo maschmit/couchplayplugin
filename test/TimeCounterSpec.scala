@@ -32,6 +32,6 @@ class TimeCounterSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
   }
 
   def countersController = new controllers.CountersControllerTrait with repositories.CounterRepositoryComponent {
-    val counterRepository = new CounterRepository
+    val counterRepository = new CacheCounterRepository
   }
 }

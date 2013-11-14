@@ -9,8 +9,14 @@ import models._
 
 trait CounterRepositoryComponent {
   val counterRepository: CounterRepository
+
+  trait CounterRepository {
+    def counters: Future[List[CounterWithAggregate]]
+    def add(newCounter: Counter): Future[Unit]
+    def increment(id: CounterId, increment: Time): Future[Unit]
+  }
   
-  class CounterRepository {
+  class CacheCounterRepository extends CounterRepository {
   
 	import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

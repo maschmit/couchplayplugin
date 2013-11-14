@@ -32,7 +32,7 @@ trait CountersControllerTrait extends Controller {
     counterRepository.increment(CounterId(id), increment).map (
       _ => Redirect(routes.CountersController.index)
     )
-  }
+  } 
 
   val counterForm = Form(
   		mapping(
@@ -48,5 +48,5 @@ trait CountersControllerTrait extends Controller {
 }
 
 object CountersController extends CountersControllerTrait with CounterRepositoryComponent {
-  val counterRepository = new CounterRepository
+  val counterRepository = new CacheCounterRepository
 }
