@@ -1,0 +1,7 @@
+{
+   "views": {
+       "counters": {
+           "map": "function(doc){if(doc.type === \"counter\") emit() }"
+       }
+   }
+}
