@@ -1,11 +1,13 @@
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
 
+import scala.concurrent.Future
+
 import play.api.test._
 import play.api.test.Helpers._
 import play.api.cache.Cache
 
-import models.Counter
+import models._
 
 class TimeCounterSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with MockFactory {
   "Adding a time counter" should "make it appear on the main page" in new WithApplication {
@@ -33,5 +35,28 @@ class TimeCounterSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
 
   def countersController = new controllers.CountersControllerTrait with repositories.CounterRepositoryComponent {
     val counterRepository = new CacheCounterRepository
+  
+  class CacheCounterRepository extends CounterRepository {
+  
+    import play.api.libs.concurrent.Execution.Implicits.defaultContext
+    import play.api.Play.current
+
+    def counters: Future[Seq[CounterWithAggregate]] = Future {
+      Cache.getAs[List[Counter]]("counters")
+        .getOrElse(Nil)
+        .map { counter =>
+          new CounterWithAggregate(counter.name, counter, Cache.getAs[Int](counter.name).map(Time(_)).getOrElse(NoTime)) }
+    }
+
+  def add(newCounter: Counter): Future[CounterId] = Future {
+      val counters = newCounter :: Cache.getAs[List[Counter]]("counters").getOrElse(Nil)
+      Cache.set("counters", counters)
+      CounterId(newCounter.name)
+    }
+
+    def increment(id: CounterId, increment: Time) = Future {
+      Cache.set(id.id, increment.minutes + Cache.getAs[Int](id.id).getOrElse(0))
+    }
+  }
   }
 }

@@ -18,28 +18,6 @@ trait CounterRepositoryComponent {
     def increment(id: CounterId, increment: Time): Future[Unit]
   }
   
-  class CacheCounterRepository extends CounterRepository {
-  
-	import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-    def counters: Future[Seq[CounterWithAggregate]] = Future {
-    	Cache.getAs[List[Counter]]("counters")
-	      .getOrElse(Nil)
-	      .map { counter =>
-	        new CounterWithAggregate(counter.name, counter, Cache.getAs[Int](counter.name).map(Time(_)).getOrElse(NoTime)) }
-	  }
-
-	def add(newCounter: Counter): Future[CounterId] = Future {
-	  	val counters = newCounter :: Cache.getAs[List[Counter]]("counters").getOrElse(Nil)
-	  	Cache.set("counters", counters)
-	  	CounterId(newCounter.name)
-	  }
-
-  	def increment(id: CounterId, increment: Time) = Future {
-  		Cache.set(id.id, increment.minutes + Cache.getAs[Int](id.id).getOrElse(0))
-  	}
-  }
-  
   class CouchCounterRepository extends CounterRepository {
 	import play.api.libs.json._
 	import play.api.libs.functional.syntax._
