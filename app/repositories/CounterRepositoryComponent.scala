@@ -52,24 +52,33 @@ trait CounterRepositoryComponent {
 	  		)
 	  }
 	}
+
+	implicit val incrementWrites = new Writes[CounterIncrement] {
+	  def writes(c: CounterIncrement): JsValue = {
+	  	Json.obj(
+	  		"type" -> "increment",
+	  		"counterId" -> c.counterId,
+	  		"minutes" -> c.minutes
+	  	  )
+	  }
+	}
   
 	import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
     def counters: Future[Seq[CounterWithAggregate]] = 
-        WS.url("http://localhost:5984/counters/_design/counters/_view/counters?include_docs=true").get().map(
+      WS.url("http://localhost:5984/counters/_design/counters/_view/counters?group=true").get().map(
           response => for {
-          	row <- (response.json \ "rows").as[Seq[JsValue]]
-          	id <- (row \ "id").asOpt[String]
-          	name <- (row \ "doc" \ "name").asOpt[String]
-          } yield Counter(name) ).map( _.map { counter =>
-	        new CounterWithAggregate(counter.name, counter, Cache.getAs[Int](counter.name).map(Time(_)).getOrElse(NoTime)) })
+       	  row <- (response.json \ "rows").as[Seq[JsValue]]
+          id <- (row \ "key").asOpt[String]
+          name <- (row \ "value" \ "name").asOpt[String]
+          minutes <- (row \ "value" \ "minutes").asOpt[Int]
+        } yield new CounterWithAggregate(id, Counter(name), TimeCounter(minutes)))
 
 	def add(newCounter: Counter): Future[CounterId] = 
     	WS.url("http://localhost:5984/counters/").post(Json.toJson(newCounter)).map(
     		response => (response.json \ "id").as[String] ).map(CounterId.apply)
 
-  	def increment(id: CounterId, increment: Time) = Future {
-  		Cache.set(id.id, increment.minutes + Cache.getAs[Int](id.id).getOrElse(0))
-  	}
+  	def increment(id: CounterId, increment: Time) = 
+  	  WS.url("http://localhost:5984/counters/").post(Json.toJson(CounterIncrement(id.id, increment.minutes))).map(r => ())
   }
 }

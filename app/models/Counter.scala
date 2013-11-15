@@ -10,6 +10,13 @@ case class CounterWithAggregate(id: String, counter: Counter, time: TimeCounter)
 
 abstract class TimeCounter
 
+object TimeCounter {
+	def apply(minutes: Int) = minutes match {
+		case 0 => NoTime
+		case x => Time(x)
+	}
+}
+
 object NoTime extends TimeCounter {
 	override def toString = "no time"
 }
