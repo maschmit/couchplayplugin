@@ -9,7 +9,7 @@ import play.api.cache.Cache
 
 import models._
 
-class TimeCounterSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with MockFactory {
+class TimeCounterSpec extends FlatSpec with ShouldMatchers with GivenWhenThen {
   "Adding a time counter" should "make it appear on the main page" in new WithApplication {
   	  val c = countersController
   	  Given("no counter called 'testCounter' is on the list")

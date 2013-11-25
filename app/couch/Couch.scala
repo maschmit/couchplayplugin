@@ -1,15 +1,17 @@
 
 import scala.concurrent.Future
-import play.api.Play.current
-import play.api.libs.json._
-import play.api.libs.ws._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.Results
+import play.api.Play.current // TODO : implicitly pass in
+import play.api.libs.json.JsObject
+import play.api.libs.ws._    // could make some wrapper to avoid using ws & json but it might not be worth it
+import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : implicitly pass in
+import play.api.mvc.Results // TODO : don't use this
 
 object Couch {
-	def url(url: String): Couch = {
-		new Couch(url)
-	}
+  import ImplicitReaders._
+
+  def url(url: String): Couch = {
+    new Couch(url)
+  }
 
   class Couch(val url: String) {
     def removeDb(name: String): Future[Boolean] =
@@ -27,33 +29,20 @@ object Couch {
   class CouchDatabase(val couch: Couch, val name: String) {
   	private def url = couch.url + name
 
-  	def create(body: JsObject): Future[DocumentUpdateResponse] = 
+  	def create(body: JsObject): Future[DocumentUpdateResult] = 
   	  WS.url(url).post(body).map( response => response.status match {
-          case 201 => SuccessfulUpdateResponse(DocumentHeader((response.json \ "id").as[String], (response.json \ "rev").as[String]))
-          case _ => FailedUpdateResponse(CouchError((response.json \ "error").as[String], (response.json \ "reason").as[String]))
+          case 201 => response.json.as[DocumentUpdateResult]
+          case _ => throw response.json.as[DocumentCreationFailed]
         })
 
-  	def create[T](id: String, body: T): DocumentUpdateResponse = ???
-  	def replace[T](head: DocumentHeader, body: T): DocumentUpdateResponse = ???
+  	def create[T](id: String, body: T): Future[DocumentUpdateResult] = ???
+  	def replace[T](head: DocumentHeader, body: T): Future[DocumentUpdateResult] = ???
   	def delete(id: String) = ???
 
-  	def get(id: String): Future[DocumentRequestResponse] = 
+  	def get(id: String): Future[Document] = 
   	  WS.url(url + '/' + id).get().map( response => response.status match {
-          case 200 => Document(DocumentHeader((response.json \ "_id").as[String], (response.json \ "_rev").as[String]), response.json.asInstanceOf[JsObject])
-          case 404 => NoDocument(CouchError((response.json \ "error").as[String], (response.json \ "reason").as[String]))
+          case 200 => response.json.as[Document]
+          case 404 => throw response.json.as[DocumentNotFound]
         })
   }
-}
-
-abstract class DocumentRequestResponse
-case class Document(head: DocumentHeader, body: JsObject) extends DocumentRequestResponse
-case class NoDocument(error: CouchError) extends DocumentRequestResponse
-
-case class DocumentHeader(id: String, rev: String)
-case class CouchError(error: String, reason: String)
-
-abstract class DocumentUpdateResponse
-case class SuccessfulUpdateResponse(head: DocumentHeader) extends DocumentUpdateResponse
-case class FailedUpdateResponse(error: CouchError) extends DocumentUpdateResponse {
-	
 }

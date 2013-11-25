@@ -1,3 +1,4 @@
+
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
 
@@ -6,7 +7,7 @@ import scala.concurrent.duration._
 
 import models._
 
-class CouchSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with MockFactory {
+class CouchSpec extends FlatSpec with ShouldMatchers with GivenWhenThen {
 	val dbUrl = "http://localhost:5984/"
 	val testDbName = "scala-couch-test"
 
