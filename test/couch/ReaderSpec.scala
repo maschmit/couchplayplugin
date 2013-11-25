@@ -40,4 +40,24 @@ class ReaderSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with Be
     Then("it should be properly formed")
     ch should be (DocumentCreationFailed("error name", "reason code"))
   }
+
+  "ViewResult" should "be deserialised from a map view response" in {
+    Given("a properly formed map view response")
+    val json = Json.obj(
+      "total_rows" -> 2,
+      "offset" -> 1,
+      "rows" -> Json.arr(
+        Json.obj("id" -> "id1", "key" -> "key1", "value" -> Json.obj("key" -> "val")),
+        Json.obj("id" -> "id2", "key" -> "key2", "value" -> Json.obj("key" -> "val")),
+        Json.obj("id" -> "id3", "key" -> "key3", "value" -> Json.obj("key" -> "val"))
+        ))
+    When("it is converted to a ViewResult")
+    val ch = json.as[ViewResult]
+    Then("it should be properly formed")
+    ch should be (MapViewResult(2, 1, List(
+      MapViewElement("id1", "key1", Json.obj("key" -> "val")),
+      MapViewElement("id2", "key2", Json.obj("key" -> "val")),
+      MapViewElement("id3", "key3", Json.obj("key" -> "val"))
+    )))
+  }
 }
