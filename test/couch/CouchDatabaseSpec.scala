@@ -1,3 +1,4 @@
+package couch
 
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
@@ -10,7 +11,7 @@ import play.api.libs.json._
 import models._
 
 class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterEach {
-  val couch = Couch.url("http://localhost:5984/")
+  val couch = Couch("http://localhost:5984/")
   val testDbName = "scala-couch-test"
   val testDb = couch.db(testDbName)
 

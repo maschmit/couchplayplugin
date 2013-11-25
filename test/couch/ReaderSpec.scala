@@ -1,7 +1,7 @@
+package couch
 
 import org.scalatest._
 import play.api.libs.json._
-import couch._
 import ImplicitReaders._
 
 class ReaderSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterEach {

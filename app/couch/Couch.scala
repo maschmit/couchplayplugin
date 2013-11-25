@@ -1,7 +1,8 @@
+package couch
 
 import scala.concurrent.Future
 import play.api.Play.current // TODO : implicitly pass in
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.ws._    // could make some wrapper to avoid using ws & json but it might not be worth it
 import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : implicitly pass in
 import play.api.mvc.Results // TODO : don't use this
@@ -9,7 +10,7 @@ import play.api.mvc.Results // TODO : don't use this
 object Couch {
   import ImplicitReaders._
 
-  def url(url: String): Couch = {
+  def apply(url: String): Couch = {
     new Couch(url)
   }
 
@@ -29,8 +30,8 @@ object Couch {
   class CouchDatabase(val couch: Couch, val name: String) {
   	private def url = couch.url + name
 
-  	def create(body: JsObject): Future[DocumentUpdateResult] = 
-  	  WS.url(url).post(body).map( response => response.status match {
+  	def create(body: JsValue): Future[DocumentUpdateResult] = 
+  	  WS.url(url).post(body.as[JsObject]).map( response => response.status match {
           case 201 => response.json.as[DocumentUpdateResult]
           case _ => throw response.json.as[DocumentCreationFailed]
         })
