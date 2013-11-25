@@ -55,9 +55,9 @@ class ReaderSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with Be
     val ch = json.as[ViewResult]
     Then("it should be properly formed")
     ch should be (MapViewResult(2, 1, List(
-      MapViewElement("id1", "key1", Json.obj("key" -> "val")),
-      MapViewElement("id2", "key2", Json.obj("key" -> "val")),
-      MapViewElement("id3", "key3", Json.obj("key" -> "val"))
+      MapViewElement("id1", JsString("key1"), Json.obj("key" -> "val")),
+      MapViewElement("id2", JsString("key2"), Json.obj("key" -> "val")),
+      MapViewElement("id3", JsString("key3"), Json.obj("key" -> "val"))
     )))
   }
 }

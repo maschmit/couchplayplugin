@@ -10,7 +10,7 @@ case class Document(head: DocumentHeader, body: JsObject)
 
 case class DocumentHeader(id: String, rev: String)
 
-case class MapViewElement(id: String, key: String, value: JsValue)
+case class MapViewElement(id: String, key: JsValue, value: JsValue)
 
 abstract class ViewResult
 object ViewResult {
@@ -35,7 +35,7 @@ case class GeneralCouchError(override val error: String, override val reason: St
 object ImplicitReaders {
   implicit val mapViewElement: Reads[MapViewElement] = (
       (__ \ "id").read[String] ~
-      (__ \ "key").read[String] ~
+      (__ \ "key").read[JsValue] ~
       (__ \ "value").read[JsValue]
   	)(MapViewElement)
 

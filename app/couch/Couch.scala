@@ -28,7 +28,7 @@ object Couch {
   }
 
   class CouchDatabase(val couch: Couch, val name: String) {
-  	private def url = couch.url + name
+  	def url = couch.url + name
 
   	def create(body: JsValue): Future[DocumentUpdateResult] = 
   	  WS.url(url).post(body.as[JsObject]).map( response => response.status match {
@@ -36,13 +36,36 @@ object Couch {
           case _ => throw response.json.as[DocumentCreationFailed]
         })
 
-  	def create[T](id: String, body: T): Future[DocumentUpdateResult] = ???
+  	def create[T](id: String, body: JsValue): Future[DocumentUpdateResult] = 
+      WS.url(url + s"/$id").put(body.as[JsObject]).map( response => response.status match {
+          case 201 => response.json.as[DocumentUpdateResult]
+          case _ => throw response.json.as[DocumentCreationFailed]
+        })
+
   	def replace[T](head: DocumentHeader, body: T): Future[DocumentUpdateResult] = ???
   	def delete(id: String) = ???
 
   	def get(id: String): Future[Document] = 
   	  WS.url(url + '/' + id).get().map( response => response.status match {
           case 200 => response.json.as[Document]
+          case 404 => throw response.json.as[DocumentNotFound]
+          case _ =>  throw response.json.as[GeneralCouchError]
+        })
+
+    def design(ddName: String) = new CouchDesign(this, ddName)
+  }
+
+  class CouchDesign(val database: CouchDatabase, val name: String) {
+    def url = s"${database.url}/_design/$name"
+
+    def view(vName: String) = new ViewQueryBuilder(this, vName)
+  }
+
+  class ViewQueryBuilder(val design: CouchDesign, val name: String) {
+    def url = s"${design.url}/_view/$name"
+    def get: Future[ViewResult] = 
+      WS.url(url).get().map( response => response.status match {
+          case 200 => response.json.as[ViewResult]
           case 404 => throw response.json.as[DocumentNotFound]
           case _ =>  throw response.json.as[GeneralCouchError]
         })
