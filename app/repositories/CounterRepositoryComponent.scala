@@ -7,6 +7,8 @@ import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.ws._
 
+import couch.Couch
+
 import models._
 
 trait CounterRepositoryComponent {
@@ -21,6 +23,8 @@ trait CounterRepositoryComponent {
   class CouchCounterRepository extends CounterRepository {
 	import play.api.libs.json._
 	import play.api.libs.functional.syntax._
+
+	val couchDb = Couch("http://localhost:5984/").db("counters")
 
 	implicit val counterWrites = new Writes[Counter] {
 	  def writes(c: Counter): JsValue = {
@@ -53,10 +57,13 @@ trait CounterRepositoryComponent {
         } yield new CounterWithAggregate(id, Counter(name), TimeCounter(minutes)))
 
 	def add(newCounter: Counter): Future[CounterId] = 
-    	WS.url("http://localhost:5984/counters/").post(Json.toJson(newCounter)).map(
-    		response => (response.json \ "id").as[String] ).map(CounterId.apply)
+	  couchDb.create(Json.toJson(newCounter)).map(created =>
+	  	  CounterId(created.id))
 
-  	def increment(id: CounterId, increment: Time) = 
-  	  WS.url("http://localhost:5984/counters/").post(Json.toJson(CounterIncrement(id.id, increment.minutes))).map(r => ())
+  	def increment(increment: CounterIncrement) = 
+  	  couchDb.create(Json.toJson(increment)).map(r => ())
+
+  	def increment(id: CounterId, time: Time) = 
+  	  increment(CounterIncrement(id.id, time.minutes))
   }
 }
