@@ -16,6 +16,7 @@ abstract class CouchError extends Exception {
 }
 case class DocumentNotFound(override val error: String, override val reason: String) extends CouchError
 case class DocumentCreationFailed(override val error: String, override val reason: String) extends CouchError
+case class GeneralCouchError(override val error: String, override val reason: String) extends CouchError
 
 
 object ImplicitReaders {
@@ -45,4 +46,7 @@ object ImplicitReaders {
 
   implicit val docCreationFailedReads: Reads[DocumentCreationFailed] =
     couchErrorReads(DocumentCreationFailed)
+
+  implicit val generalErrorReads: Reads[GeneralCouchError] =
+    couchErrorReads(GeneralCouchError)
 }

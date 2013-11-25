@@ -43,6 +43,7 @@ object Couch {
   	  WS.url(url + '/' + id).get().map( response => response.status match {
           case 200 => response.json.as[Document]
           case 404 => throw response.json.as[DocumentNotFound]
+          case _ =>  throw response.json.as[GeneralCouchError]
         })
   }
 }
