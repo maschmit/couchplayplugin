@@ -1,5 +1,7 @@
 package couch
 
+import view._
+
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
 

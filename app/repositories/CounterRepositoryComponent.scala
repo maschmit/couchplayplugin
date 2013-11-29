@@ -7,7 +7,8 @@ import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.ws._
 
-import couch.{Couch, ReduceViewElement}
+import couch.Couch
+import couch.view.ReduceViewElement
 
 import models._
 

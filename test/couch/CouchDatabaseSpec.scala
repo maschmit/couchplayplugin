@@ -1,5 +1,8 @@
 package couch
 
+import document._
+import error._
+
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
 
@@ -7,8 +10,6 @@ import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
 import play.api.libs.json._
-
-import models._
 
 class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterEach {
   val couch = Couch("http://localhost:5984/")

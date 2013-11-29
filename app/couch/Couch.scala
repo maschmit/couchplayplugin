@@ -1,5 +1,9 @@
 package couch
 
+import document._
+import view._
+import error._
+
 import scala.concurrent.Future
 import play.api.Play.current // TODO : implicitly pass in
 import play.api.libs.json.{JsObject, JsValue}
@@ -8,7 +12,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : imp
 import play.api.mvc.Results // TODO : don't use this
 
 object Couch {
-  import ImplicitReaders._
+  import ErrorReaders._
+  import DocumentReaders._
+  import ViewReaders._
 
   def apply(url: String): Couch = {
     new Couch(url)
