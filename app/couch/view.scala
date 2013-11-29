@@ -1,5 +1,7 @@
 package couch.view
 
+import couch.error.ClientImplementationException
+
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -9,6 +11,7 @@ object ViewResult {
   def apply(total_rows: Option[Int], offset: Option[Int], rows: JsArray) = (total_rows, offset) match {
     case (Some(rc), Some(o)) => MapViewResult(rc, o, rows.as[List[MapViewElement]])
     case (None, None)        => ReduceViewResult(rows.as[List[ReduceViewElement]])
+    case v => throw new ClientImplementationException(s"Expected either both total_rows and offset or neither, got: $v")
   }  
 }
 abstract class ViewResult {

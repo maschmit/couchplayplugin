@@ -13,6 +13,8 @@ case class DocumentNotFound(override val error: String, override val reason: Str
 case class DocumentCreationFailed(override val error: String, override val reason: String) extends CouchError
 case class GeneralCouchError(override val error: String, override val reason: String) extends CouchError
 
+class ClientImplementationException(message: String) extends
+  Exception(s"The response was not understood by the client - it may be that this is a version which has not been tested with the client ($message)")
 
 object ErrorReaders {
   private def couchErrorReads = (
