@@ -80,5 +80,5 @@ object Couch {
   }
 
   private def paramString(params: Seq[(String, Option[Any])]) = "?" + params
-      .filterNot(_._2.isEmpty).map { case (name, Some(value)) => s"$name=$value" }.mkString("&")
+      .collect { case (name, Some(value)) => s"$name=$value" }.mkString("&")
 }
