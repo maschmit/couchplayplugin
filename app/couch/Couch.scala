@@ -58,16 +58,21 @@ object Couch {
   class CouchDesign(val database: CouchDatabase, val name: String) {
     def url = s"${database.url}/_design/$name"
 
-    def view(vName: String) = new ViewQueryBuilder(this, vName)
+    def view(vName: String) = new ViewQueryBuilder(this, vName, None)
   }
 
-  class ViewQueryBuilder(val design: CouchDesign, val name: String) {
-    def url = s"${design.url}/_view/$name"
-    def get: Future[ViewResult] = 
+  class ViewQueryBuilder(val design: CouchDesign, val name: String, val group: Option[Boolean]) {
+    def url = s"${design.url}/_view/$name" + params
+    def params = paramString(List(("group", group)))
+    def grouped = new ViewQueryBuilder(design, name, Some(true))
+    def get(): Future[ViewResult] = 
       WS.url(url).get().map( response => response.status match {
           case 200 => response.json.as[ViewResult]
           case 404 => throw response.json.as[DocumentNotFound]
           case _ =>  throw response.json.as[GeneralCouchError]
         })
   }
+
+  private def paramString(params: Seq[(String, Option[Any])]) = "?" + params
+      .filterNot(_._2.isEmpty).map { case (name, Some(value)) => s"$name=$value" }.mkString("&")
 }

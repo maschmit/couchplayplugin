@@ -7,7 +7,7 @@ import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.ws._
 
-import couch.Couch
+import couch.{Couch, ReduceViewElement}
 
 import models._
 
@@ -48,13 +48,13 @@ trait CounterRepositoryComponent {
 	import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
     def counters: Future[Seq[CounterWithAggregate]] = 
-      WS.url("http://localhost:5984/counters/_design/counters/_view/counters?group=true").get().map(
-          response => for {
-       	  row <- (response.json \ "rows").as[Seq[JsValue]]
-          id <- (row \ "key").asOpt[String]
-          name <- (row \ "value" \ "name").asOpt[String]
-          minutes <- (row \ "value" \ "minutes").asOpt[Int]
-        } yield new CounterWithAggregate(id, Counter(name), TimeCounter(minutes)))
+      couchDb.design("counters").view("counters").grouped.get().map(_.rows.map {
+      	case ReduceViewElement(key, value) => for {
+      	  k <- key.asOpt[String]
+      	  name <- (value \ "name").asOpt[String]
+      	  minutes <- (value \ "minutes").asOpt[Int]
+      	} yield new CounterWithAggregate(k, Counter(name), TimeCounter(minutes))
+      }.collect { case Some(v) => v })
 
 	def add(newCounter: Counter): Future[CounterId] = 
 	  couchDb.create(Json.toJson(newCounter)).map(created =>

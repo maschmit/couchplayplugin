@@ -11,20 +11,32 @@ case class Document(head: DocumentHeader, body: JsObject)
 
 case class DocumentHeader(id: String, rev: String)
 
-abstract class ViewElement
-case class MapViewElement(id: String, key: JsValue, value: JsValue) extends ViewElement
-case class ReduceViewElement(key: JsValue, value: JsValue) extends ViewElement
+abstract class ViewElement {
+	def key: JsValue
+	def value: JsValue
+}
+case class MapViewElement(id: String, override val key: JsValue, override val value: JsValue) extends ViewElement
+case class ReduceViewElement(override val key: JsValue, override val value: JsValue) extends ViewElement
 
-abstract class ViewResult
+abstract class ViewResult {
+  type Element <: ViewElement
+  def rows: List[Element]
+  protected lazy val keysMulti: Map[JsValue, Iterable[Element]] = 
+    rows.groupBy(_.key)
+}
 object ViewResult {
   def apply(total_rows: Option[Int], offset: Option[Int], rows: JsArray) = (total_rows, offset) match {
   	case (Some(rc), Some(o)) => MapViewResult(rc, o, rows.as[List[MapViewElement]])
   	case (None, None)        => ReduceViewResult(rows.as[List[ReduceViewElement]])
   }  
 }
-
-case class MapViewResult(rowCount: Int, offset: Int, rows: List[MapViewElement]) extends ViewResult
-case class ReduceViewResult(rows: List[ReduceViewElement]) extends ViewResult
+case class MapViewResult(rowCount: Int, offset: Int, override val rows: List[MapViewElement]) extends ViewResult {
+  type Element = MapViewElement
+}
+case class ReduceViewResult(override val rows: List[ReduceViewElement]) extends ViewResult {
+  type Element = ReduceViewElement
+  def key(k: JsValue): ReduceViewElement = keysMulti(k).iterator.next
+}
 
 
 abstract class CouchError extends Exception {
