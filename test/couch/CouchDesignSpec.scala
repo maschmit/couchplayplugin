@@ -64,6 +64,21 @@ class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
     mapresult.rows(2) should be (MapViewElement("3", Json.arr(2, 1), JsNumber(1)))
   }
 
+  it should "produce a map result from a view with reduce if requested" in {
+    Given("a valid map and reduce view")
+    Await.ready(testDb.create("_design/test", mapReduceDesign), 1.second)
+    When("the view is requested with noReduce")
+    val result = Await.result(testDb.design("test").view("add").notReduced.get, 1.second)
+    Then("the result should be a map result")
+    var mapresult = result.asInstanceOf[MapViewResult]
+    And("the result should have the correct values")
+    mapresult.rowCount should be (3)
+    mapresult.offset should be (0)
+    mapresult.rows(0) should be (MapViewElement("1", Json.arr(1, 1), JsNumber(1)))
+    mapresult.rows(1) should be (MapViewElement("2", Json.arr(1, 2), JsNumber(1)))
+    mapresult.rows(2) should be (MapViewElement("3", Json.arr(2, 1), JsNumber(1)))
+  }
+
   it should "produce a result for reduce views" in {
     Given("a valid map and reduce view")
     Await.ready(testDb.create("_design/test", mapReduceDesign), 1.second)

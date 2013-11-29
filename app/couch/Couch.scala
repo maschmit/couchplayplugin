@@ -64,13 +64,27 @@ object Couch {
   class CouchDesign(val database: CouchDatabase, val name: String) {
     def url = s"${database.url}/_design/$name"
 
-    def view(vName: String) = new ViewQueryBuilder(this, vName, None)
+    def view(vName: String) = new ViewQueryBuilder(this, vName)
   }
 
-  class ViewQueryBuilder(val design: CouchDesign, val name: String, val group: Option[Boolean]) {
-    def url = s"${design.url}/_view/$name" + params
-    def params = paramString(List(("group", group)))
-    def grouped = new ViewQueryBuilder(design, name, Some(true))
+  class ViewQueryBuilder(val design: CouchDesign, val name: String,
+      val group: Option[Boolean] = None, val reduce: Option[Boolean] = None) {
+
+    def url = s"${design.url}/_view/$name$params"
+    def params = paramString(List(("group", group), ("reduce", reduce)))
+
+    def grouped = new ViewQueryBuilder(design, name, Some(true), reduce)
+    
+    /** Sets the reduce=false parameter on the view request - this should mean
+      * that either a Future[MapViewResult] is returned
+      */
+    def notReduced = new ViewQueryBuilder(design, name, group, Some(false))
+
+    /** Sets the reduce=true parameter on the view request - this should mean
+      * that either a Future[ReduceViewResult] is returned or a CouchError is thrown
+      */
+    def reduced = new ViewQueryBuilder(design, name, group, Some(true))
+
     def get(): Future[ViewResult] = 
       WS.url(url).get().map( response => response.status match {
           case 200 => response.json.as[ViewResult]
