@@ -3,6 +3,7 @@ package couch
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
+import ImplicitReaders._
 
 case class DocumentUpdateResult(ok: Boolean, id: String, rev: String)
 
@@ -10,16 +11,20 @@ case class Document(head: DocumentHeader, body: JsObject)
 
 case class DocumentHeader(id: String, rev: String)
 
-case class MapViewElement(id: String, key: JsValue, value: JsValue)
+abstract class ViewElement
+case class MapViewElement(id: String, key: JsValue, value: JsValue) extends ViewElement
+case class ReduceViewElement(key: JsValue, value: JsValue) extends ViewElement
 
 abstract class ViewResult
 object ViewResult {
-  def apply(total_rows: Option[Int], offset: Option[Int], rows: List[MapViewElement]) = (total_rows, offset) match {
-  	case (Some(rc), Some(o)) => MapViewResult(rc, o, rows)
+  def apply(total_rows: Option[Int], offset: Option[Int], rows: JsArray) = (total_rows, offset) match {
+  	case (Some(rc), Some(o)) => MapViewResult(rc, o, rows.as[List[MapViewElement]])
+  	case (None, None)        => ReduceViewResult(rows.as[List[ReduceViewElement]])
   }  
 }
 
 case class MapViewResult(rowCount: Int, offset: Int, rows: List[MapViewElement]) extends ViewResult
+case class ReduceViewResult(rows: List[ReduceViewElement]) extends ViewResult
 
 
 abstract class CouchError extends Exception {
@@ -33,6 +38,11 @@ case class GeneralCouchError(override val error: String, override val reason: St
 
 
 object ImplicitReaders {
+  implicit val reduceViewElement: Reads[ReduceViewElement] = (
+      (__ \ "key").read[JsValue] ~
+      (__ \ "value").read[JsValue]
+  	)(ReduceViewElement)
+
   implicit val mapViewElement: Reads[MapViewElement] = (
       (__ \ "id").read[String] ~
       (__ \ "key").read[JsValue] ~
@@ -42,7 +52,7 @@ object ImplicitReaders {
   implicit val viewResultReads: Reads[ViewResult] = (
       (__ \ "total_rows").readNullable[Int] ~
       (__ \ "offset").readNullable[Int] ~
-      (__ \ "rows").read[List[MapViewElement]]
+      (__ \ "rows").read[JsArray]
   	)(ViewResult.apply _)
 
   implicit val documentCreateResult: Reads[DocumentUpdateResult] = (
