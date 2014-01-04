@@ -1,7 +1,7 @@
 Time counter example for CouchDB play plugin
 ============================================
 
-^The play framework plugin hasn't yet been extracted from this application - if you have the time and inclintation to do it that would be appreciated^
+**The play framework plugin hasn't yet been extracted from this application - if you have the time and inclintation to do it that would be appreciated**
 
 What this does
 --------------
