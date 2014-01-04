@@ -4,11 +4,18 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 
-case class DocumentUpdateResult(ok: Boolean, id: String, rev: String)
+case class DocumentUpdateResult(ok: Boolean, id: String, rev: String) extends DocumentHeader
 
-case class Document(head: DocumentHeader, body: JsObject)
+case class Document(head: DocumentHeader, json: JsObject) {
+  lazy val body = json - "_id" - "_rev"
+}
 
-case class DocumentHeader(id: String, rev: String)
+case class DocumentHeaderImpl(id: String, rev: String) extends DocumentHeader
+
+trait DocumentHeader {
+  def id: String
+  def rev: String
+}
 
 
 object DocumentReaders {
@@ -21,7 +28,7 @@ object DocumentReaders {
   implicit val documentHeader: Reads[DocumentHeader] = (
     (__ \ "_id").read[String] ~
     (__ \ "_rev").read[String]
-    )(DocumentHeader)
+    )(DocumentHeaderImpl)
 
   implicit val document: Reads[Document] = (
     documentHeader ~
