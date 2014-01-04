@@ -6,9 +6,9 @@ Time counter example for CouchDB play plugin
 What this does
 --------------
 
-1. Provides a scala api for communicating with a couchdb server, built on play framework's async WS api
-
-
+1. Provides a scala api for communicating with a couchdb server
+2. Uses the play builtin async Ws request api (all operations are non-blocking)
+3. Create, Replace, Delete and Get operations
 
 Future things
 -------------
