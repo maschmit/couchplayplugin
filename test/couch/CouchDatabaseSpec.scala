@@ -62,4 +62,34 @@ class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen 
       Await.result(testDb.get("theid"), 1.second)
     }
   }
+
+  "CouchDatabase.delete" should "succeed for an existing document" in {
+    Given("a doc is added")
+    val creationResult = Await.result(testDb.create(testDoc), 1.second)
+    When("the doc is deleted")
+    val result = Await.result(testDb.delete(creationResult), 1.second)
+    Then("there will be no document at that id")
+    intercept[DocumentNotFound] {
+      Await.result(testDb.get("theid"), 1.second)
+    }
+  }
+
+  it should "fail if the document does not exist" in {
+    When("a non existent doc is deleted")
+    intercept[DocumentNotFound] {
+      Await.result(testDb.delete(DocumentHeaderImpl("theid", "rev")), 1.second)
+    }
+  }
+
+  "CouchDatabase.replace" should "be able to replace a doc if it knows the last revision number" in {
+    Given("a document exists")
+    val creationResult = Await.result(testDb.create(testDoc), 1.second)
+    When("the document is replaced")
+    val newDoc = Json.obj("new" -> "replaced")
+    val result = Await.result(testDb.replace(creationResult, newDoc), 1.second)
+    And("the doc is requested")
+    val doc = Await.result(testDb.get(result.id), 1.second)
+    Then("that will be the new document")
+    (doc.body \ "new").as[String] should be ("replaced")
+  }
 }

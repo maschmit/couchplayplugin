@@ -35,6 +35,8 @@ object Couch {
 
   class CouchDatabase(val couch: Couch, val name: String) {
   	def url = couch.url + name
+    private def docUrl(id: String): String = s"$url/$id"
+    private def revUrl(docHead: DocumentHeader): String = s"$url/${docHead.id}?rev=${docHead.rev}"
 
   	def create(body: JsValue): Future[DocumentUpdateResult] = 
   	  WS.url(url).post(body.as[JsObject]).map( response => response.status match {
@@ -43,16 +45,26 @@ object Couch {
         })
 
   	def create[T](id: String, body: JsValue): Future[DocumentUpdateResult] = 
-      WS.url(url + s"/$id").put(body.as[JsObject]).map( response => response.status match {
+      WS.url(docUrl(id)).put(body.as[JsObject]).map( response => response.status match {
           case 201 => response.json.as[DocumentUpdateResult]
           case _ => throw response.json.as[DocumentCreationFailed]
         })
 
-  	def replace[T](head: DocumentHeader, body: T): Future[DocumentUpdateResult] = ???
-  	def delete(id: String) = ???
+    def replace[T](head: DocumentHeader, body: JsValue): Future[DocumentUpdateResult] = 
+      WS.url(revUrl(head)).put(body.as[JsObject]).map( response => response.status match {
+          case 201 => response.json.as[DocumentUpdateResult]
+          case _ => throw response.json.as[DocumentCreationFailed]
+        })
+
+    def delete(docHead: DocumentHeader) =
+      WS.url(revUrl(docHead)).delete().map( response => response.status match {
+          case 200 => response.json
+          case 404 => throw response.json.as[DocumentNotFound]
+          case _ =>  throw response.json.as[GeneralCouchError]
+        })
 
   	def get(id: String): Future[Document] = 
-  	  WS.url(url + '/' + id).get().map( response => response.status match {
+  	  WS.url(docUrl(id)).get().map( response => response.status match {
           case 200 => response.json.as[Document]
           case 404 => throw response.json.as[DocumentNotFound]
           case _ =>  throw response.json.as[GeneralCouchError]
