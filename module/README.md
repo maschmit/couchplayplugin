@@ -11,8 +11,9 @@ What this does
 Future things
 -------------
 
-2. Add a startup hook to check that the design docs on the couch server match those in the conf directory
-3. Make uploading updated design documents easy
+1. Add a startup hook to check that the design docs on the couch server match those in the conf directory
+2. Make uploading updated design documents easy
+3. CouchApp / kanso like directory - design doc mapping
 4. Test against various versions to find the compatibility bounds
 5. Set up automated testing
 
