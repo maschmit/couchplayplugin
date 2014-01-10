@@ -16,6 +16,7 @@ Future things
 3. CouchApp / kanso like directory - design doc mapping
 4. Test against various versions to find the compatibility bounds
 5. Set up automated testing
+6. take implicit write on create etc so it can take T instead of JsValue
 
 Compatibility
 -------------

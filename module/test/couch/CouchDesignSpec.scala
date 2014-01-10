@@ -1,5 +1,7 @@
 package couch
 
+import sync.CouchDesignDocument
+
 import view._
 
 import org.scalatest._
@@ -10,7 +12,6 @@ import scala.concurrent.duration._
 
 import play.api.libs.json._
 
-import models._
 
 class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
   val couch = Couch("http://localhost:5984/")
@@ -21,24 +22,9 @@ class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
   val doc12 = Json.obj("_id" -> "2", "k" -> Seq(1, 2))
   val doc21 = Json.obj("_id" -> "3", "k" -> Seq(2, 1))
   val docs = Seq(doc11, doc12, doc21)
-  val mapView = Json.obj() +
-    ("map", JsString("""|function(doc) {
-                |  emit(doc.k, 1)
-                |}""".stripMargin))
-  val mapDesign = Json.obj(
-    "views" -> Json.obj(
-      "add" -> mapView
-    )
-  )
-  val mapReduceView = mapView + 
-    ("reduce", JsString("""|function(key, values, rereduce) {
-                  |  return sum(values);
-                  |}""".stripMargin))
-  val mapReduceDesign = Json.obj(
-    "views" -> Json.obj(
-      "add" -> mapReduceView
-    )
-  )
+
+  val mapDesign = CouchDesignDocument.read("test/couch/designs/mapDoc.json").json
+  val mapReduceDesign = CouchDesignDocument.read("test/couch/designs/mapReduceDoc.json").json
 
 
   before {

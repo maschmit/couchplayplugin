@@ -1,0 +1,8 @@
+{
+  "views": {
+      "add": {
+        "map": "function(doc) {\n  emit(doc.k, 1)\n}",
+        "reduce": "function(key, values, rereduce) {\n  return sum(values);\n}"
+      }
+  }
+}
