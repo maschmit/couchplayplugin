@@ -11,6 +11,9 @@ import scala.concurrent.duration._
 
 import play.api.libs.json._
 
+import java.io.File
+
+
 class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
   val couch = Couch("http://localhost:5984/")
   val testDbName = "scala-couch-test"
@@ -53,5 +56,27 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     Then("the doc should contain the new version")
     val document = Await.result(docPtr.get(), 1.second)
     document.body should be (mapDesign)
+  }
+
+  "CouchSync(directoryPath).to(Database)" should "create docs if they exist locally and not in the db" in {
+    When("a new dir is synced")
+    val syncFutures = CouchSync(new File("test/couch/testfiles/_design")).to(testDb)
+    syncFutures.foreach(Await.result(_, 1.second))
+    Then("the docs should exist")
+    val doc1 = Await.result(testDb.get("mapDoc"), 1.second)
+    doc1.body should be (mapDesign)
+    val doc2 = Await.result(testDb.get("mapReduceDoc"), 1.second)
+    doc2.body should be (mapReduceDesign)
+  }
+
+  it should "sync files in _design/ to design documents" in {
+    When("a new dir contating _design dir is synced")
+    val syncFutures = CouchSync(new File("test/couch/testfiles")).to(testDb)
+    syncFutures.foreach(Await.result(_, 1.second))
+    Then("the docs should exist")
+    val doc1 = Await.result(testDb.get("_design/mapDoc"), 1.second)
+    doc1.body should be (mapDesign)
+    val doc2 = Await.result(testDb.get("_design/mapReduceDoc"), 1.second)
+    doc2.body should be (mapReduceDesign)
   }
 }
