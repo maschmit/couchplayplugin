@@ -4,7 +4,9 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 
-case class DocumentUpdateResult(ok: Boolean, id: String, rev: String) extends DocumentHeader
+case class DocumentUpdateResult(ok: Boolean, id: String, rev: String) extends DocumentHeader {
+  lazy val head = DocumentHeaderImpl(id, rev)
+}
 
 case class Document(head: DocumentHeader, json: JsObject) {
   lazy val body = json - "_id" - "_rev"

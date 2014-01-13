@@ -36,6 +36,13 @@ class DocumentPointer(val db: CouchDatabase, val id: String) {
         case _ =>  throw response.json.as[GeneralCouchError]
       })
 
+  def getOpt(): Future[Option[Document]] = 
+    WS.url(url).get().map( response => response.status match {
+        case 200 => Some(response.json.as[Document])
+        case 404 => None
+        case _ =>  throw response.json.as[GeneralCouchError]
+      })
+
   def rev(rev: String): DocumentRevisionPointer = DocumentPointer(db, id, rev)
 }
 
