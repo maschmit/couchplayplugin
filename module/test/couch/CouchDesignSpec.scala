@@ -23,8 +23,8 @@ class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
   val doc21 = Json.obj("_id" -> "3", "k" -> Seq(2, 1))
   val docs = Seq(doc11, doc12, doc21)
 
-  val mapDesign = CouchDesignDocument.read("test/couch/designs/mapDoc.json").json
-  val mapReduceDesign = CouchDesignDocument.read("test/couch/designs/mapReduceDoc.json").json
+  val mapDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapDoc.json").json
+  val mapReduceDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json").json
 
 
   before {

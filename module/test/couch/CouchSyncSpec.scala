@@ -17,9 +17,8 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
   val testDb = couch.db(testDbName)
   val docPtr = testDb.doc("docId")
 
-
-  val mapDesign = CouchDesignDocument.read("test/couch/designs/mapDoc.json").json
-  val mapReduceDesign = CouchDesignDocument.read("test/couch/designs/mapReduceDoc.json").json
+  val mapDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapDoc.json").json
+  val mapReduceDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json").json
 
   before {
     Await.ready(couch.addDb(testDbName), 1.second)

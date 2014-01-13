@@ -29,7 +29,7 @@ class CouchDesignDocumentSpec extends FlatSpec with ShouldMatchers with GivenWhe
 
   "CouchDesignDocument.read" should "read a design document from a local file" in {
     When("the document is read")
-    val doc = CouchDesignDocument.read("test/couch/designs/mapReduceDoc.json")
+    val doc = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json")
     Then("the result should be a design document")
     (doc.isInstanceOf[CouchDesignDocument]) should be (true)
     And("the result should have the correct values")
