@@ -84,7 +84,7 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     When("a new doc is checked")
     val result = Await.result(CouchSync(mapDesign).check(docPtr), 1.second)
     Then("the result should be not matched")
-    result should be (NoMatch())
+    result should not be a ('match)
   }
 
   it should "match if an identical doc already exists" in {
@@ -93,7 +93,7 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     When("an identical doc is checked")
     val result = Await.result(CouchSync(mapDesign).check(docPtr), 1.second)
     Then("the result should be a match")
-    result should be (Match())
+    result should be a ('match)
   }
 
   it should "not match if an existing doc has different contents" in {
@@ -102,14 +102,14 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     When("a differing doc is checked")
     val result = Await.result(CouchSync(mapDesign).check(docPtr), 1.second)
     Then("the result should not be a match")
-    result should be (NoMatch())
+    result should not be a ('match)
   }
 
   "CouchSync(directoryPath).check(Database)" should "not match if they exist locally and not in the db" in {
     When("a new dir is checked")
     val result = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
     Then("the result should be not matched")
-    result should be (NoMatch())
+    result should not be a ('match)
   }
 
   it should "match if the files have already been synced" in {
@@ -119,6 +119,6 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     When("the dir is checked")
     val result = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
     Then("the result should be matched")
-    result should be (Match())
+    result should be a ('match)
   }
 }

@@ -6,6 +6,7 @@ import couch.document.DocumentHeader
 
 import play.api.libs.json._
 import scala.concurrent.Future
+import scala.async.Async.{async, await}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : implicitly pass in
 
 import java.io.File
@@ -19,6 +20,7 @@ object CouchSync {
   def apply(dir: File): CouchDocumentSetSync = new DirectoryCouchDocumentSetSync(None, dir)
 
   class JsonCouchDocumentSync(json:JsValue) extends CouchDocumentSync {
+    def sourceName = "(In memory json value)"
   	def to(ptr: DocumentPointer): Future[DocumentHeader] =
   	  ptr.getOpt().flatMap {
   	  	case None => ptr.create(json)
@@ -28,10 +30,14 @@ object CouchSync {
 
     def check(ptr: DocumentPointer): Future[MatchResult] = 
       ptr.getOpt().map {
-        case Some(doc) if doc.body.equals(json) => Match()
-        case None => NoMatch()
-        case Some(doc) => NoMatch()
+        case None => DocumentNoMatch(sourceName, json, ptr, None)
+        case Some(doc) if doc.body.equals(json) => DocumentMatch(sourceName, ptr)
+        case Some(doc) => DocumentNoMatch(sourceName, json, ptr, Some(doc.body))
       }
+  }
+
+  class FileCouchDocumentSync(file: File) extends JsonCouchDocumentSync(getJson(file)) {
+    override def sourceName = file.getPath
   }
 
   class DirectoryCouchDocumentSetSync(root: Option[String], dir: File) extends CouchDocumentSetSync {
@@ -44,12 +50,12 @@ object CouchSync {
   	  }
 
     def check(db: CouchDatabase): Future[MatchResult] = 
-      Future.reduce(dir.listFiles.map {
+      MatchResult.all(dir.listFiles.map {
         case file if file.isFile && file.getName().endsWith(".json") =>
           new JsonCouchDocumentSync(getJson(file)).check(db.doc(jsonFileName(file.getName)))
         case subdir if subdir.isDirectory =>
           new DirectoryCouchDocumentSetSync(Some(subRoot(subdir.getName)), subdir).check(db)
-      }) (MatchResult.reduce _)
+      })
 
     private def jsonFileName(name: String) = root.map(_ + "/").getOrElse("") + name.substring(0,name.length-5)
     private def subRoot(name: String) = root.map(_ + "/").getOrElse("") + name
@@ -70,13 +76,31 @@ trait CouchDocumentSetSync {
 }
 
 object MatchResult {
-  def reduce(_1: MatchResult, _2: MatchResult): MatchResult =
-    if (_1.isInstanceOf[NoMatch] || _2.isInstanceOf[NoMatch])
-      NoMatch()
-    else
-      Match()
+  def all[T <: MatchResult](fs: Seq[Future[T]]): Future[Seq[T] with MatchResult] = async {
+    val b = collection.mutable.ListBuffer[T]()
+    var _fs = fs.toList
+    var matches = true
+    while(!_fs.isEmpty) {
+      val next = await { _fs.head }
+      matches = matches && next.isMatch
+      b.append(next)
+      _fs = _fs.tail
+    }
+    class CombinedMatchResult[T <: MatchResult](s: Seq[T]) extends collection.SeqProxy[T] with Seq[T] with MatchResult {
+      def isMatch = matches
+      def self = s
+    }
+    new CombinedMatchResult(b)
+  }
 }
 
-sealed abstract class MatchResult
-case class Match() extends MatchResult
-case class NoMatch() extends MatchResult
+
+trait MatchResult {
+  def isMatch: Boolean
+}
+case class DocumentMatch(source: String, destination: DocumentPointer) extends MatchResult {
+  def isMatch = true
+}
+case class DocumentNoMatch(source: String, sourceJson: JsValue, destination: DocumentPointer, destinationJson: Option[JsValue]) extends MatchResult {
+  def isMatch = false
+}
