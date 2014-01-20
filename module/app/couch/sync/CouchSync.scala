@@ -67,35 +67,23 @@ trait CouchDocumentSetSync {
 }
 
 object MatchResult {
-  def all(fs: Seq[Future[SingleMatchResult]]): Future[MultiMatchResult] = async {
-    val b = collection.mutable.ListBuffer[SingleMatchResult]()
-    var _fs = fs.toList
-    var matches = true
-    while(!_fs.isEmpty) {
-      val next = await { _fs.head }
-      matches = matches && next.isMatch
-      b.append(next)
-      _fs = _fs.tail
+
+  private class CombinedMatchResult[T <: SingleMatchResult](s: Seq[T], matches: Boolean) extends collection.SeqProxy[T] with MultiMatchResult {
+    def isMatch = matches
+    def self = s
+    override def toString = s"CombinedMatchResult : $isMatch {$self}"
+    def run(): Future[Seq[DocumentHeader]] = {
+      val runningUpdates = s.collect { case r: SingleMatchResult if !r.isMatch => r.run() }
+      Future.fold(runningUpdates)(List[DocumentHeader]())(_.::(_)).map(_.toSeq)
     }
-    class CombinedMatchResult[T <: SingleMatchResult](s: Seq[T]) extends collection.SeqProxy[T] with MultiMatchResult {
-      def isMatch = matches
-      def self = s
-      def run(): Future[Seq[DocumentHeader]] = {
-        def all[T](fs: Seq[Future[T]]): Future[Seq[T]] = async {
-          val b = collection.mutable.ListBuffer[T]()
-          var _fs = fs.toList
-          while(!_fs.isEmpty) {
-            val next = await { _fs.head }
-            b.append(next)
-            _fs = _fs.tail
-          }
-          b.toSeq
-        }
-        all(s.collect { case r: SingleMatchResult if !r.isMatch => r.run() } )
-      }
-    }
-    new CombinedMatchResult(b)
   }
+
+  def all(fs: Seq[Future[SingleMatchResult]]): Future[MultiMatchResult] = 
+    Future.fold(fs)((List[SingleMatchResult](), true)) {
+      case ((list, matches), b) => (b :: list, matches && b.isMatch)
+    } .map {
+      case (l, m) => new CombinedMatchResult(l, m)
+    }
 }
 
 
