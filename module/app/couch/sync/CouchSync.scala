@@ -2,7 +2,7 @@ package couch.sync
 
 import couch.DocumentPointer
 import couch.Couch.CouchDatabase
-import couch.document.DocumentHeader
+import couch.document._
 
 import play.api.libs.json._
 import scala.concurrent.Future
@@ -21,18 +21,13 @@ object CouchSync {
 
   class JsonCouchDocumentSync(json:JsValue) extends CouchDocumentSync {
     def sourceName = "(In memory json value)"
-  	def to(ptr: DocumentPointer): Future[DocumentHeader] =
-  	  ptr.getOpt().flatMap {
-  	  	case None => ptr.create(json)
-  	  	case Some(doc) if doc.body.equals(json) => Future.successful(doc.head)
-  	  	case Some(doc) => ptr.rev(doc.head.rev).replace(json)
-  	  }
+  	def to(ptr: DocumentPointer): Future[DocumentHeader] = check(ptr).flatMap(_.run())
 
-    def check(ptr: DocumentPointer): Future[MatchResult] = 
+    def check(ptr: DocumentPointer): Future[SingleMatchResult] = 
       ptr.getOpt().map {
         case None => DocumentNoMatch(sourceName, json, ptr, None)
         case Some(doc) if doc.body.equals(json) => DocumentMatch(sourceName, ptr)
-        case Some(doc) => DocumentNoMatch(sourceName, json, ptr, Some(doc.body))
+        case Some(doc) => DocumentNoMatch(sourceName, json, ptr, Some(doc))
       }
   }
 
@@ -41,21 +36,17 @@ object CouchSync {
   }
 
   class DirectoryCouchDocumentSetSync(root: Option[String], dir: File) extends CouchDocumentSetSync {
-  	def to(db: CouchDatabase) = 
-  	  dir.listFiles.flatMap {
-  	  	case file if file.isFile && file.getName().endsWith(".json") =>
-  	  	  Seq(new JsonCouchDocumentSync(getJson(file)).to(db.doc(jsonFileName(file.getName))))
-  	  	case subdir if subdir.isDirectory =>
-          new DirectoryCouchDocumentSetSync(Some(subRoot(subdir.getName)), subdir).to(db)
-  	  }
+  	def to(db: CouchDatabase) = check(db).flatMap(_.run())
 
-    def check(db: CouchDatabase): Future[MatchResult] = 
-      MatchResult.all(dir.listFiles.map {
+    def check(db: CouchDatabase) = MatchResult.all(checkSeperate(db))
+
+    private def checkSeperate(db: CouchDatabase): Seq[Future[SingleMatchResult]] = 
+      dir.listFiles.flatMap {
         case file if file.isFile && file.getName().endsWith(".json") =>
-          new JsonCouchDocumentSync(getJson(file)).check(db.doc(jsonFileName(file.getName)))
+          Seq(new JsonCouchDocumentSync(getJson(file)).check(db.doc(jsonFileName(file.getName))))
         case subdir if subdir.isDirectory =>
-          new DirectoryCouchDocumentSetSync(Some(subRoot(subdir.getName)), subdir).check(db)
-      })
+          new DirectoryCouchDocumentSetSync(Some(subRoot(subdir.getName)), subdir).checkSeperate(db)
+      }
 
     private def jsonFileName(name: String) = root.map(_ + "/").getOrElse("") + name.substring(0,name.length-5)
     private def subRoot(name: String) = root.map(_ + "/").getOrElse("") + name
@@ -71,13 +62,13 @@ trait CouchDocumentSync {
 }
 
 trait CouchDocumentSetSync {
-  def to(db: CouchDatabase): Seq[Future[Any]]
-  def check(db: CouchDatabase): Future[MatchResult]
+  def to(db: CouchDatabase): Future[Seq[DocumentHeader]]
+  def check(db: CouchDatabase): Future[MultiMatchResult]
 }
 
 object MatchResult {
-  def all[T <: MatchResult](fs: Seq[Future[T]]): Future[Seq[T] with MatchResult] = async {
-    val b = collection.mutable.ListBuffer[T]()
+  def all(fs: Seq[Future[SingleMatchResult]]): Future[MultiMatchResult] = async {
+    val b = collection.mutable.ListBuffer[SingleMatchResult]()
     var _fs = fs.toList
     var matches = true
     while(!_fs.isEmpty) {
@@ -86,9 +77,22 @@ object MatchResult {
       b.append(next)
       _fs = _fs.tail
     }
-    class CombinedMatchResult[T <: MatchResult](s: Seq[T]) extends collection.SeqProxy[T] with Seq[T] with MatchResult {
+    class CombinedMatchResult[T <: SingleMatchResult](s: Seq[T]) extends collection.SeqProxy[T] with MultiMatchResult {
       def isMatch = matches
       def self = s
+      def run(): Future[Seq[DocumentHeader]] = {
+        def all[T](fs: Seq[Future[T]]): Future[Seq[T]] = async {
+          val b = collection.mutable.ListBuffer[T]()
+          var _fs = fs.toList
+          while(!_fs.isEmpty) {
+            val next = await { _fs.head }
+            b.append(next)
+            _fs = _fs.tail
+          }
+          b.toSeq
+        }
+        all(s.collect { case r: SingleMatchResult if !r.isMatch => r.run() } )
+      }
     }
     new CombinedMatchResult(b)
   }
@@ -97,10 +101,22 @@ object MatchResult {
 
 trait MatchResult {
   def isMatch: Boolean
+  def run(): Future[Any]
 }
-case class DocumentMatch(source: String, destination: DocumentPointer) extends MatchResult {
+trait MultiMatchResult extends Seq[SingleMatchResult] with MatchResult {
+  def run(): Future[Seq[DocumentHeader]]
+}
+trait SingleMatchResult extends MatchResult {
+  def run(): Future[DocumentHeader]
+}
+case class DocumentMatch(source: String, destination: DocumentPointer) extends SingleMatchResult {
   def isMatch = true
+  def run(): Future[DocumentHeader] = Future.successful(null)
 }
-case class DocumentNoMatch(source: String, sourceJson: JsValue, destination: DocumentPointer, destinationJson: Option[JsValue]) extends MatchResult {
+case class DocumentNoMatch(source: String, sourceJson: JsValue, destination: DocumentPointer, destinationJson: Option[Document]) extends SingleMatchResult {
   def isMatch = false
+  def run(): Future[DocumentHeader] = destinationJson match {
+    case None => destination.create(sourceJson)
+    case Some(doc) => destination.rev(doc.head.rev).replace(sourceJson)
+  }
 }

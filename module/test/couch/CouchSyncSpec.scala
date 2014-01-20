@@ -8,6 +8,7 @@ import org.scalamock.scalatest.MockFactory
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json._
 
@@ -30,9 +31,11 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     Await.result(couch.removeDb(testDbName), 1.second)
   }
 
-  "CouchSync(Json).to(DocumentPointer)" should "create a doc if it exists locally and not in the db" in {
+  "CouchSync(Json).check(DocumentPointer).run()" should "create a doc if it exists locally and not in the db" in {
     When("a new doc is synced")
-    Await.result(CouchSync(mapDesign).to(docPtr), 1.second)
+    val checkRes = Await.result(CouchSync(mapDesign).check(docPtr), 1.second)
+
+    Await.result(checkRes.run(), 1.second)
     Then("the doc should exist")
     val document = Await.result(docPtr.get(), 1.second)
     document.body should be (mapDesign)
@@ -42,7 +45,7 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     Given("an existing doc")
     val creationResult = Await.result(docPtr.create(mapDesign), 1.second)
     When("an identical doc is synced")
-    Await.result(CouchSync(mapDesign).to(docPtr), 1.second)
+    Await.result(CouchSync(mapDesign).check(docPtr).flatMap(_.run()), 1.second)
     Then("a new revision shouldn't be created")
     val document = Await.result(docPtr.get(), 1.second)
     document.head should be (creationResult.head)
@@ -52,16 +55,15 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
     Given("an existing doc")
     Await.result(docPtr.create(mapReduceDesign), 1.second)
     When("a differing doc is synced")
-    Await.result(CouchSync(mapDesign).to(docPtr), 1.second)
+    Await.result(CouchSync(mapDesign).check(docPtr).flatMap(_.run()), 1.second)
     Then("the doc should contain the new version")
     val document = Await.result(docPtr.get(), 1.second)
     document.body should be (mapDesign)
   }
 
-  "CouchSync(directoryPath).to(Database)" should "create docs if they exist locally and not in the db" in {
+  "CouchSync(directoryPath).check(Database).run()" should "create docs if they exist locally and not in the db" in {
     When("a new dir is synced")
-    val syncFutures = CouchSync(new File("test/couch/testfiles/_design")).to(testDb)
-    syncFutures.foreach(Await.result(_, 1.second))
+    Await.result(CouchSync(new File("test/couch/testfiles/_design")).check(testDb).flatMap(_.run()), 1.second)
     Then("the docs should exist")
     val doc1 = Await.result(testDb.get("mapDoc"), 1.second)
     doc1.body should be (mapDesign)
@@ -71,8 +73,8 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
 
   it should "sync files in _design/ to design documents" in {
     When("a new dir contating _design dir is synced")
-    val syncFutures = CouchSync(new File("test/couch/testfiles")).to(testDb)
-    syncFutures.foreach(Await.result(_, 1.second))
+    val checkRes = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
+    Await.result(checkRes.run(), 1.second)
     Then("the docs should exist")
     val doc1 = Await.result(testDb.get("_design/mapDoc"), 1.second)
     doc1.body should be (mapDesign)
@@ -114,8 +116,7 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
 
   it should "match if the files have already been synced" in {
     Given("the dir is already synced")
-    val syncFutures = CouchSync(new File("test/couch/testfiles")).to(testDb)
-    syncFutures.foreach(Await.result(_, 1.second))
+    Await.result(CouchSync(new File("test/couch/testfiles")).to(testDb), 1.second)
     When("the dir is checked")
     val result = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
     Then("the result should be matched")
