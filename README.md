@@ -1,4 +1,4 @@
-Time counter example for CouchDB play plugin
+CouchDB plugin for Playframework
 ============================================
 
 What this does
@@ -7,16 +7,7 @@ What this does
 1. Provides a scala api for communicating with a couchdb server
 2. Uses the play builtin async Ws request api (all operations are non-blocking)
 3. Create, Replace, Delete and Get operations
-
-Future things
--------------
-
-1. Add a startup hook to check that the design docs on the couch server match those in the conf directory
-2. Make uploading updated design documents easy
-3. CouchApp / kanso like directory - design doc mapping
-4. Test against various versions to find the compatibility bounds
-5. Set up automated testing
-6. take implicit write on create etc so it can take T instead of JsValue
+4. (COMING SOON) update your database design and static documents from source control as evolutions does for sql DBs
 
 Compatibility
 -------------
