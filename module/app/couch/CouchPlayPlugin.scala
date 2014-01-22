@@ -2,6 +2,8 @@ package couch
 
 import config._
 import sync._
+
+
 import play.core._
 
 import play.api._
@@ -21,10 +23,20 @@ Note to use this plugin, you need to add a conf/play.plugins file to your app th
 
 451:couch.CouchPlayPlugin
 */
-class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupport {
+class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupport with BaseCouchPlayPlugin {
 
   def couchConfig = CouchConfiguration(app.configuration)
-  def applyEvolutions = false
+  def appMode = app.mode
+  def testSync(localDir: String, db: Couch.CouchDatabase): MultiMatchResult =
+    Await.result(CouchSync(new File(localDir)).check(db), 1.second)
+
+}
+
+trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
+  def couchConfig: CouchConfiguration
+  def appMode: Mode.Mode
+  def testSync(localDir: String, db: Couch.CouchDatabase): MultiMatchResult
+
   /**
    * Checks the evolutions state.
    */
@@ -33,42 +45,24 @@ class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupp
     couchConfig.db.values.foreach { dbConfig =>
       val syncDir = dbConfig.syncDir.getOrElse("conf/couch")
       val db = Couch(dbConfig.host).db(dbConfig.database)
-      val script = Await.result(CouchSync(new File(syncDir)).check(db), 1.second)
-      println(script)
+      val script = testSync(syncDir, db)
 
       if (!script.isMatch) {
-        app.mode match {
+        appMode match {
           case Mode.Test => script.run()
-          case Mode.Dev if applyEvolutions => script.run()
-          case Mode.Prod if applyEvolutions => script.run()
+          case Mode.Dev if dbConfig.autoApplyDev => script.run()
+          case Mode.Prod if dbConfig.autoApplyProd => script.run()
           case Mode.Prod => {
-            Logger.warn("Your production database [" + dbConfig.id + "] needs evolutions! \n\n" + toHumanReadableScript(script))
+            Logger.warn("Your production database [" + dbConfig.id + "] needs evolutions! \n\n" + script.map(_.destination.id).mkString)
             //Logger.warn("Run with -DapplyEvolutions." + dbName + "=true if you want to run them automatically (be careful)")
 
-            throw InvalidDatabaseRevision(dbConfig.id, toHumanReadableScript(script))
+            throw RemoteDocsOutOfSync(dbConfig.id, script)
           }
-          case _ => throw InvalidDatabaseRevision(dbConfig.id, toHumanReadableScript(script))
+          case _ => throw RemoteDocsOutOfSync(dbConfig.id, script)
         }
       }
     }
   }
-
-  def toHumanReadableScript(results: Seq[MatchResult] with MatchResult): String = 
-
-  	<div>
-  	  <div style="width: 50%; display: inline-block"><h3>Source</h3></div><div style="width: 50%; display: inline-block"><h3>Destination</h3></div>
-  	</div>.toString +
-  	results.collect { case result: DocumentNoMatch =>
-    <div>
-      <h4>{result.source} ==> {result.destination.url}</h4>
-      <div style="width: 49%; display: inline-block">
-        <pre style="overflow-x: scroll">{Json.prettyPrint(result.sourceJson)}</pre>
-      </div>
-      <div style="width: 49%; display: inline-block">
-        <pre style="overflow-x: scroll">{result.destinationJson.map(_.json).map(Json.prettyPrint(_)).getOrElse("")}</pre>
-      </div>
-    </div>
-  }.mkString
 
   def handleWebCommand(request: play.api.mvc.RequestHeader, sbtLink: play.core.SBTLink, path: java.io.File): Option[play.api.mvc.SimpleResult] = {
 
@@ -82,7 +76,7 @@ class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupp
         Some {
           val dbConfig = couchConfig.db(dbId)
 		  val db = Couch(dbConfig.host).db(dbConfig.database)
-		  val script = Await.result(CouchSync(new File("conf/couch")).to(db), 1.second)
+		  Await.result(CouchSync(new File("conf/couch")).to(db), 1.second)
 	      sbtLink.forceReload()
 	      play.api.mvc.Results.Redirect(redirectUrl)
         }
@@ -103,7 +97,7 @@ class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupp
  * @param db the database name
  * @param script the script to be run to resolve the conflict.
  */
-case class InvalidDatabaseRevision(db: String, script: String) extends PlayException.RichDescription(
+case class RemoteDocsOutOfSync(db: String, results: Seq[MatchResult] with MatchResult) extends PlayException.RichDescription(
   "Database '" + db + "' needs to be synced!",
   "There is a difference between documents on the database and in the local source directory.") {
 
@@ -120,6 +114,23 @@ case class InvalidDatabaseRevision(db: String, script: String) extends PlayExcep
     <span>Document(s) will be updated on your database -</span>
     <input name="evolution-button" type="button" value="Update document(s) now!" onclick={ javascript }/>
 
-  }.mkString + script
+  }.mkString + toHumanReadableScript(results)
+
+  private def toHumanReadableScript(results: Seq[MatchResult] with MatchResult): String = 
+
+  	<div>
+  	  <div style="width: 50%; display: inline-block"><h3>Source</h3></div><div style="width: 50%; display: inline-block"><h3>Destination</h3></div>
+  	</div>.toString +
+  	results.collect { case result: DocumentNoMatch =>
+    <div>
+      <h4>{result.source} ==> {result.destination.url}</h4>
+      <div style="width: 49%; display: inline-block">
+        <pre style="overflow-x: scroll">{Json.prettyPrint(result.sourceJson)}</pre>
+      </div>
+      <div style="width: 49%; display: inline-block">
+        <pre style="overflow-x: scroll">{result.destinationJson.map(_.json).map(Json.prettyPrint(_)).getOrElse("")}</pre>
+      </div>
+    </div>
+  }.mkString
 
 }

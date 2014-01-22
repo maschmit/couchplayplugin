@@ -96,6 +96,7 @@ trait MultiMatchResult extends Seq[SingleMatchResult] with MatchResult {
 }
 trait SingleMatchResult extends MatchResult {
   def run(): Future[DocumentHeader]
+  def destination: DocumentPointer
 }
 case class DocumentMatch(source: String, destination: DocumentPointer) extends SingleMatchResult {
   def isMatch = true
