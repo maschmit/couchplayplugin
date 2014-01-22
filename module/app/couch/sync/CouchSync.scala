@@ -43,7 +43,7 @@ object CouchSync {
     private def checkSeperate(db: CouchDatabase): Seq[Future[SingleMatchResult]] = 
       dir.listFiles.flatMap {
         case file if file.isFile && file.getName().endsWith(".json") =>
-          Seq(new JsonCouchDocumentSync(getJson(file)).check(db.doc(jsonFileName(file.getName))))
+          Seq(new FileCouchDocumentSync(file).check(db.doc(jsonFileName(file.getName))))
         case subdir if subdir.isDirectory =>
           new DirectoryCouchDocumentSetSync(Some(subRoot(subdir.getName)), subdir).checkSeperate(db)
       }
