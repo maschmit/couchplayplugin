@@ -42,8 +42,8 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
    */
   override def onStart() {
 
-    couchConfig.db.values.foreach { dbConfig =>
-      val syncDir = dbConfig.syncDir.getOrElse("conf/couch")
+    couchConfig.db.values.filterNot(_.syncDir == None).foreach { dbConfig =>
+      val syncDir = dbConfig.syncDir.get
       val db = Couch(dbConfig.host).db(dbConfig.database)
       val script = testSync(syncDir, db)
 

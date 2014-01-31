@@ -12,7 +12,7 @@ import org.scalatest._
 
 
 class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
-  val testDbConfig = CouchDBConfiguration("id", "http://testhost/", "testDb", None, true, false, false)
+  val testDbConfig = CouchDBConfiguration("id", "http://testhost/", "testDb", Some("syncDir"), false, false)
   
   "CouchPlayPlugin startup" should "automatically apply updates when in test mode" in {
   	Given("the plugin is configured with a CouchDB configuration and is started in test mode")
@@ -77,6 +77,16 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	And("the exception will contain the sync result and db id")
   	exception.db should be ("id")
   	exception.results should be (testSyncResult)
+  }
+
+  it should "do nothing if the syncDir is not defined" in {
+  	Given("the plugin is configured with a CouchDB configuration with no syncDir and is started in test mode")
+  	val testSyncResult = new TestSyncResult(false)
+  	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig.copy(syncDir = None))), Mode.Test, testSyncResult)
+  	When("the plugin is started")
+  	plugin.onStart()
+  	Then("the update will not run")
+  	testSyncResult.updateRan should be (false)
   }
 
   class CouchPlayPlugin(config: CouchConfiguration, mode: Mode.Mode, testSyncResult: MultiMatchResult) extends Plugin with HandleWebCommandSupport with BaseCouchPlayPlugin {

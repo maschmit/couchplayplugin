@@ -14,7 +14,7 @@ class CouchConfigurationSpec extends FlatSpec with ShouldMatchers with GivenWhen
       "database" -> "databaseName",
       "autoApplyDev" -> true,
       "autoApplyProd" -> false,
-      "checkSync" -> false
+      "dir" -> "syncDir"
     ),
     "secondary" -> Map(
       "host" -> "https://anotherHost/",
@@ -30,13 +30,15 @@ class CouchConfigurationSpec extends FlatSpec with ShouldMatchers with GivenWhen
     firstConfig.database should be ("databaseName")
     firstConfig.autoApplyDev should be (true)
     firstConfig.autoApplyProd should be (false)
-    firstConfig.checkSync should be (false)
+    firstConfig.checkSync should be (true)
+    firstConfig.syncDir should be (Some("syncDir"))
 
     val secondConfig = couchConfig.db("secondary")
     secondConfig.host should be ("https://anotherHost/")
     secondConfig.database should be ("anotherDatabaseName")
     secondConfig.autoApplyDev should be (false)
     secondConfig.autoApplyProd should be (false)
-    secondConfig.checkSync should be (true)
+    secondConfig.checkSync should be (false)
+    secondConfig.syncDir should be (None)
   }
 }
