@@ -47,6 +47,38 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	testSyncResult.updateRan should be (true)
   }
 
+  it should "throw an exception in prod mode with autoApplyProd disabled" in {
+  	Given("the plugin is configured with a CouchDB configuration and is started in prod mode")
+  	And("the result of the sync check is that the db needs updating")
+  	val testSyncResult = new TestSyncResult(false)
+  	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig)), Mode.Prod, testSyncResult)
+  	When("the plugin is started")
+  	val exception = intercept[RemoteDocsOutOfSync] {
+  		plugin.onStart()
+  	}
+  	Then("the update will not be run")
+  	testSyncResult.updateRan should be (false)
+  	And("the exception will contain the sync result and db id")
+  	exception.db should be ("id")
+  	exception.results should be (testSyncResult)
+  }
+
+  it should "throw an exception in dev mode with autoApplyDev disabled" in {
+  	Given("the plugin is configured with a CouchDB configuration and is started in dev mode")
+  	And("the result of the sync check is that the db needs updating")
+  	val testSyncResult = new TestSyncResult(false)
+  	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig)), Mode.Dev, testSyncResult)
+  	When("the plugin is started")
+  	val exception = intercept[RemoteDocsOutOfSync] {
+  		plugin.onStart()
+  	}
+  	Then("the update will not be run")
+  	testSyncResult.updateRan should be (false)
+  	And("the exception will contain the sync result and db id")
+  	exception.db should be ("id")
+  	exception.results should be (testSyncResult)
+  }
+
   class CouchPlayPlugin(config: CouchConfiguration, mode: Mode.Mode, testSyncResult: MultiMatchResult) extends Plugin with HandleWebCommandSupport with BaseCouchPlayPlugin {
     def couchConfig = config
     def appMode = mode
