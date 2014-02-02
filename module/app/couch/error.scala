@@ -9,6 +9,7 @@ abstract class CouchError extends Exception {
 	def reason: String
 	override def getMessage: String = s"Error: '$error', Reason: '$reason'"
 }
+case class DatabaseNotFound(override val error: String, override val reason: String) extends CouchError
 case class DocumentNotFound(override val error: String, override val reason: String) extends CouchError
 case class DocumentCreationFailed(override val error: String, override val reason: String) extends CouchError
 case class GeneralCouchError(override val error: String, override val reason: String) extends CouchError
@@ -21,6 +22,9 @@ object ErrorReaders {
   	(__ \ "error").read[String] ~
   	(__ \ "reason").read[String]
   )
+
+  implicit val dbNotFoundReads: Reads[DatabaseNotFound] =
+    couchErrorReads(DatabaseNotFound)
 
   implicit val docNotFoundReads: Reads[DocumentNotFound] =
     couchErrorReads(DocumentNotFound)

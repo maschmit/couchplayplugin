@@ -58,5 +58,12 @@ object Couch {
     def doc(id: String): DocumentPointer = DocumentPointer(this, id)
 
     def design(ddName: String) = new CouchDesign(this, ddName)
+
+    def info(): Future[DatabaseInfo] = 
+      WS.url(url).get().map( response => response.status match {
+          case 200 => DatabaseInfo()
+          case 404 => throw response.json.as[DatabaseNotFound]
+          case _ => throw response.json.as[GeneralCouchError]
+        })
   }
 }

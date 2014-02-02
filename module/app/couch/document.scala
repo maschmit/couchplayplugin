@@ -19,6 +19,8 @@ trait DocumentHeader {
   def rev: String
 }
 
+case class DatabaseInfo()
+
 
 object DocumentReaders {
   implicit val documentCreateResult: Reads[DocumentUpdateResult] = (

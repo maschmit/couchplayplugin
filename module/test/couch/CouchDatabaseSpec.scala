@@ -92,4 +92,19 @@ class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen 
     Then("that will be the new document")
     (doc.body \ "new").as[String] should be ("replaced")
   }
+
+  "CouchDatabase.info" should "succeed for an existing database" in {
+    Given("a db exists")
+    When("the info is requested")
+    val result = Await.result(testDb.info(), 1.second)
+    Then("it will succeed")
+    result should be (DatabaseInfo())
+  }
+
+  it should "fail if the database does not exist" in {
+    When("a non existent database is requested")
+    intercept[DatabaseNotFound] {
+      Await.result(couch.db("non-existant-db").info, 1.second)
+    }
+  }
 }
