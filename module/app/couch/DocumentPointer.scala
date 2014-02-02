@@ -4,7 +4,6 @@ import document._
 import error._
 
 import ErrorReaders._
-import Couch._
 
 import scala.concurrent.Future
 import play.api.Play.current // TODO : implicitly pass in

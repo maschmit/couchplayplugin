@@ -1,5 +1,6 @@
 package couch
 
+import error.DatabaseNotFound
 import config._
 import sync._
 
@@ -27,15 +28,17 @@ class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupp
 
   def couchConfig = CouchConfiguration(app.configuration)
   def appMode = app.mode
-  def testSync(localDir: String, db: Couch.CouchDatabase): MultiMatchResult =
+  def testSync(localDir: String, db: CouchDatabase): MultiMatchResult =
     Await.result(CouchSync(new File(localDir)).check(db), 1.second)
+  def couch(host: String): Couch = Couch(host)
 
 }
 
 trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
   def couchConfig: CouchConfiguration
   def appMode: Mode.Mode
-  def testSync(localDir: String, db: Couch.CouchDatabase): MultiMatchResult
+  def testSync(localDir: String, db: CouchDatabase): MultiMatchResult
+  def couch(host: String): Couch
 
   /**
    * Checks the evolutions state.
@@ -43,8 +46,32 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
   override def onStart() {
 
     couchConfig.db.values.filterNot(_.syncDir == None).foreach { dbConfig =>
+      val db = couch(dbConfig.host).db(dbConfig.database)
+      syncDB(dbConfig, db)
+      syncDocs(dbConfig, db)
+    }
+
+    def syncDB(dbConfig: CouchDBConfiguration, db: CouchDatabase) {
+      def createDB() = couch(dbConfig.host).addDb(dbConfig.database)
+      Await.result(db.info().recoverWith {
+      	case _: DatabaseNotFound => appMode match {
+          case Mode.Test => createDB()
+          case Mode.Dev if dbConfig.autoApplyDev => createDB()
+          case Mode.Prod if dbConfig.autoApplyProd => createDB()
+          case Mode.Prod => {
+            Logger.warn("Your production database [" + dbConfig.id + "] needs to be created! \n\n")
+            //Logger.warn("Run with -DapplyEvolutions." + dbName + "=true if you want to run them automatically (be careful)")
+
+            throw RemoteDBDoesntExist(dbConfig.id)
+          }
+          case _ => throw RemoteDBDoesntExist(dbConfig.id)
+        }
+        db.info()
+      }, 1.second)
+    }
+
+    def syncDocs(dbConfig: CouchDBConfiguration, db: CouchDatabase) {
       val syncDir = dbConfig.syncDir.get
-      val db = Couch(dbConfig.host).db(dbConfig.database)
       val script = testSync(syncDir, db)
 
       if (!script.isMatch) {
@@ -67,6 +94,7 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
   def handleWebCommand(request: play.api.mvc.RequestHeader, sbtLink: play.core.SBTLink, path: java.io.File): Option[play.api.mvc.SimpleResult] = {
 
     val applyEvolutions = """/@couchplay/apply/([a-zA-Z0-9_]+)""".r 
+    val createDB = """/@couchplay/create/([a-zA-Z0-9_]+)""".r 
 
     lazy val redirectUrl = request.queryString.get("redirect").filterNot(_.isEmpty).map(_(0)).getOrElse("/")
 
@@ -82,10 +110,46 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
         }
       }
 
+      case createDB(dbId) => {
+        Some {
+          val dbConfig = couchConfig.db(dbId)
+		  Await.result(Couch(dbConfig.host).addDb(dbConfig.database), 1.second)
+	      sbtLink.forceReload()
+	      play.api.mvc.Results.Redirect(redirectUrl)
+        }
+      }
+
       case _ => None
     }
 
   }
+
+}
+
+
+/**
+ * Exception thrown when the syncing database doesn't exist
+ *
+ * @param db the database name
+ */
+case class RemoteDBDoesntExist(db: String) extends PlayException.RichDescription(
+  "Database '" + db + "' doesn't exist!",
+  "A CouchDB database configured for this application doesn't exist.") {
+
+  def subTitle = "The database must be created"
+
+  def content = ""
+
+  private val javascript = """
+        document.location = '/@couchplay/create/%s?redirect=' + encodeURIComponent(location)
+    """.format(db).trim
+
+  def htmlDescription = {
+
+    <span>A database will be created on your couchDB instance -</span>
+    <input name="evolution-button" type="button" value="Create database!" onclick={ javascript }/>
+
+  }.mkString
 
 }
 

@@ -1,7 +1,7 @@
 package couch.sync
 
 import couch.DocumentPointer
-import couch.Couch.CouchDatabase
+import couch.CouchDatabase
 import couch.document._
 
 import play.api.libs.json._

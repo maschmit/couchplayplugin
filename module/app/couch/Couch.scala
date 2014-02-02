@@ -11,28 +11,49 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : imp
 import play.api.mvc.Results // TODO : don't use this
 
 
+
+trait Couch {
+  def url: String
+  def removeDb(name: String): Future[Boolean]
+  def addDb(name: String): Future[Boolean]
+  def db(name: String): CouchDatabase
+}
+
+trait CouchDatabase{
+  def name: String
+  def url: String
+  def create(body: JsValue): Future[DocumentUpdateResult]
+  def create[T](id: String, body: JsValue): Future[DocumentUpdateResult]
+  def replace[T](head: DocumentHeader, body: JsValue): Future[DocumentUpdateResult]
+  def delete(docHead: DocumentHeader): Future[JsValue]
+  def get(id: String): Future[Document]
+  def doc(id: String): DocumentPointer
+  def design(ddName: String): CouchDesign
+  def info(): Future[DatabaseInfo]
+}
+
 object Couch {
   import ErrorReaders._
   import DocumentReaders._
 
   def apply(url: String): Couch = {
-    new Couch(url)
+    new BasicCouch(url)
   }
 
-  class Couch(val url: String) {
+  class BasicCouch(val url: String) extends Couch {
     def removeDb(name: String): Future[Boolean] =
       WS.url(url + name).delete().map( response =>
       	(response.json \ "ok").asOpt[Boolean].getOrElse(false) )
 
-	def addDb(name: String): Future[Boolean] =
+	  def addDb(name: String): Future[Boolean] =
       WS.url(url + name).put(Results.EmptyContent()).map( response =>
       	(response.json \ "ok").asOpt[Boolean].getOrElse(false) )
 
     def db(name: String): CouchDatabase =
-      new CouchDatabase(this, name)
+      new BasicCouchDatabase(this, name)
   }
 
-  class CouchDatabase(val couch: Couch, val name: String) {
+  class BasicCouchDatabase(val couch: Couch, val name: String) extends CouchDatabase {
   	def url = couch.url + name
     private def docUrl(id: String): String = s"$url/$id"
     private def revUrl(docHead: DocumentHeader): String = s"$url/${docHead.id}?rev=${docHead.rev}"

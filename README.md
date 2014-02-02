@@ -24,9 +24,8 @@ WARNING - UI is crap and doesn't demonstrate well the power of couchdb or play
 
 1. (after Getting started) `cd ../samples/time-counter/`
 2. Run tests and launch sample `play test run`
-3. Create the database 'counters' at http://localhost:5984/_utils/index.html - Should be automatic in next version
 3. Go to http://localhost:9000/
-4. You will be asked to sync the database
+4. You will be asked to create the database and sync
 5. You can then create counters and add to them
 
 Compatibility
