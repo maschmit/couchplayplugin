@@ -139,8 +139,8 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
     def couchConfig = config
     def appMode = mode
     def testSync(localDir: String, db: CouchDatabase): MultiMatchResult = testSyncResult
-    def couch(host: String): Couch = couchMock
-    val couchMock = mock[Couch]
+    def couch(host: String): CouchHost = couchMock
+    val couchMock = mock[CouchHost]
     val dbMock = mock[CouchDatabase]
     (couchMock.db _) expects ("testDb") returning dbMock anyNumberOfTimes
   }

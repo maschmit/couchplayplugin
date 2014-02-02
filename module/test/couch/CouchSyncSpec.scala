@@ -16,7 +16,7 @@ import java.io.File
 
 
 class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
-  val couch = Couch("http://localhost:5984/")
+  val couch = Couch.host("http://localhost:5984/")
   val testDbName = "scala-couch-test"
   val testDb = couch.db(testDbName)
   val docPtr = testDb.doc("docId")

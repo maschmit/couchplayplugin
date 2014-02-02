@@ -30,7 +30,7 @@ class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupp
   def appMode = app.mode
   def testSync(localDir: String, db: CouchDatabase): MultiMatchResult =
     Await.result(CouchSync(new File(localDir)).check(db), 1.second)
-  def couch(host: String): Couch = Couch(host)
+  def couch(host: String): CouchHost = Couch.host(host)
 
 }
 
@@ -38,7 +38,7 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
   def couchConfig: CouchConfiguration
   def appMode: Mode.Mode
   def testSync(localDir: String, db: CouchDatabase): MultiMatchResult
-  def couch(host: String): Couch
+  def couch(host: String): CouchHost
 
   /**
    * Checks the evolutions state.
@@ -103,7 +103,7 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
       case applyEvolutions(dbId) => {
         Some {
           val dbConfig = couchConfig.db(dbId)
-		  val db = Couch(dbConfig.host).db(dbConfig.database)
+		  val db = Couch.host(dbConfig.host).db(dbConfig.database)
 		  Await.result(CouchSync(new File("conf/couch")).to(db), 1.second)
 	      sbtLink.forceReload()
 	      play.api.mvc.Results.Redirect(redirectUrl)
@@ -113,7 +113,7 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
       case createDB(dbId) => {
         Some {
           val dbConfig = couchConfig.db(dbId)
-		  Await.result(Couch(dbConfig.host).addDb(dbConfig.database), 1.second)
+		  Await.result(Couch.host(dbConfig.host).addDb(dbConfig.database), 1.second)
 	      sbtLink.forceReload()
 	      play.api.mvc.Results.Redirect(redirectUrl)
         }

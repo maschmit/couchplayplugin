@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 import play.api.libs.json._
 
 class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterEach {
-  val couch = Couch("http://localhost:5984/")
+  val couch = Couch.host("http://localhost:5984/")
   val testDbName = "scala-couch-test"
   val testDb = couch.db(testDbName)
 

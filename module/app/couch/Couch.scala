@@ -12,7 +12,7 @@ import play.api.mvc.Results // TODO : don't use this
 
 
 
-trait Couch {
+trait CouchHost {
   def url: String
   def removeDb(name: String): Future[Boolean]
   def addDb(name: String): Future[Boolean]
@@ -36,11 +36,11 @@ object Couch {
   import ErrorReaders._
   import DocumentReaders._
 
-  def apply(url: String): Couch = {
-    new BasicCouch(url)
+  def host(url: String): CouchHost = {
+    new BasicCouchHost(url)
   }
 
-  class BasicCouch(val url: String) extends Couch {
+  class BasicCouchHost(val url: String) extends CouchHost {
     def removeDb(name: String): Future[Boolean] =
       WS.url(url + name).delete().map( response =>
       	(response.json \ "ok").asOpt[Boolean].getOrElse(false) )
@@ -53,7 +53,7 @@ object Couch {
       new BasicCouchDatabase(this, name)
   }
 
-  class BasicCouchDatabase(val couch: Couch, val name: String) extends CouchDatabase {
+  class BasicCouchDatabase(val couch: CouchHost, val name: String) extends CouchDatabase {
   	def url = couch.url + name
     private def docUrl(id: String): String = s"$url/$id"
     private def revUrl(docHead: DocumentHeader): String = s"$url/${docHead.id}?rev=${docHead.rev}"
