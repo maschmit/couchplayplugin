@@ -83,7 +83,6 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
       }
 
       case _ => None
-
     }
 
   }
