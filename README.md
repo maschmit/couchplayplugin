@@ -18,8 +18,9 @@ Getting started
 4. `cd couchplayplugin/module`
 5. Run the tests and build the module to your local repository `play test publish-local`
 
-Try the demo - WARNING - UI is crap and doesn't demonstrate well the power of couchdb or play
----------------------------------------------------------------------------------------------
+Try the demo
+------------
+WARNING - UI is crap and doesn't demonstrate well the power of couchdb or play
 
 1. (after Getting started) `cd ../samples/time-counter/`
 2. Run tests and launch sample `play test run`
