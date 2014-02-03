@@ -60,7 +60,6 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
           case Mode.Prod if dbConfig.autoApplyProd => createDB()
           case Mode.Prod => {
             Logger.warn("Your production database [" + dbConfig.id + "] needs to be created! \n\n")
-            //Logger.warn("Run with -DapplyEvolutions." + dbName + "=true if you want to run them automatically (be careful)")
 
             throw RemoteDBDoesntExist(dbConfig.id)
           }
@@ -81,7 +80,6 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
           case Mode.Prod if dbConfig.autoApplyProd => script.run()
           case Mode.Prod => {
             Logger.warn("Your production database [" + dbConfig.id + "] needs evolutions! \n\n" + script.map(_.destination.id).mkString)
-            //Logger.warn("Run with -DapplyEvolutions." + dbName + "=true if you want to run them automatically (be careful)")
 
             throw RemoteDocsOutOfSync(dbConfig.id, script)
           }

@@ -1,8 +1,11 @@
 package couch.config
 
-import play.api.Configuration
+import play.api.{Configuration,Play}
+import Play.current
 
 object CouchConfiguration {
+  
+  lazy val config = apply(Play.configuration)
 
   def apply(config: Configuration): CouchConfiguration = {
   	val dbs = for {

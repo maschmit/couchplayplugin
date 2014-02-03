@@ -2,6 +2,7 @@ package couch
 
 import document._
 import error._
+import config.CouchConfiguration
 
 import scala.concurrent.Future
 import play.api.Play.current // TODO : implicitly pass in
@@ -39,6 +40,8 @@ object Couch {
   def host(url: String): CouchHost = {
     new BasicCouchHost(url)
   }
+
+  lazy val load = new CouchConfigDBLoader(CouchConfiguration.config)
 
   class BasicCouchHost(val url: String) extends CouchHost {
     def removeDb(name: String): Future[Boolean] =
