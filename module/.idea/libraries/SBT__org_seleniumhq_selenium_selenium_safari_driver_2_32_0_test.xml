@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="SBT: org.seleniumhq.selenium:selenium-safari-driver:2.32.0:test">
+    <CLASSES>
+      <root 
+      url="jar://$USER_HOME$/bin/play-2.2.0/repository/local/org.seleniumhq.selenium/selenium-safari-driver/2.32.0/jars/selenium-safari-driver.jar!/">
+</root>
+    </CLASSES>
+    <JAVADOC> </JAVADOC>
+    <SOURCES> </SOURCES>
+  </library>
+</component>
