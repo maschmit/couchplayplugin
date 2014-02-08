@@ -1,5 +1,6 @@
 package couch
 
+import couch.test.DatabaseForEach
 import document._
 import error._
 
@@ -11,15 +12,8 @@ import scala.concurrent.duration._
 
 import play.api.libs.json._
 
-class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterEach {
-  val couch = Couch.host("http://localhost:5984/")
-  val testDbName = "scala-couch-test"
-  val testDb = couch.db(testDbName)
-
+class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with DatabaseForEach {
   val testDoc = Json.obj("string" -> "test document")
-
-  override def beforeEach = Await.result(couch.addDb(testDbName), 1.second)
-  override def afterEach = Await.result(couch.removeDb(testDbName), 1.second)
 
   "CouchDatabase.create" should "succeed and respond with the meta info about the document which can be used to fetch the document again" in {
     When("a doc is added to a db")
@@ -32,7 +26,7 @@ class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen 
 
   it should "fail and throw an exception if the database does not exist" in {
     intercept[CouchError] {
-      Await.result(couch.db("non-existent-db").create(testDoc), 1.second)
+      Await.result(absentDb.create(testDoc), 1.second)
     }
   }
 
@@ -104,7 +98,7 @@ class CouchDatabaseSpec extends FlatSpec with ShouldMatchers with GivenWhenThen 
   it should "fail if the database does not exist" in {
     When("a non existent database is requested")
     intercept[DatabaseNotFound] {
-      Await.result(couch.db("non-existant-db").info, 1.second)
+      Await.result(absentDb.info, 1.second)
     }
   }
 }

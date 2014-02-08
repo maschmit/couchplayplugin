@@ -39,8 +39,8 @@ class ViewQueryBuilder(val design: CouchDesign, val name: String,
   def get(): Future[ViewResult] = 
     WS.url(url).get().map( response => response.status match {
         case 200 => response.json.as[ViewResult]
-        case 404 => throw response.json.as[DocumentNotFound]
-        case _ =>  throw response.json.as[GeneralCouchError]
+        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
+        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
       })
 
   private def paramString(params: Seq[(String, Option[Any])]) = "?" + params

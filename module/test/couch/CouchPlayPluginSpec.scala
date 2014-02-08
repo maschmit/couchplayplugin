@@ -2,7 +2,7 @@ package couch
 
 import config._
 import sync._
-import error.DatabaseNotFound
+import error.{DatabaseNotFound, CouchErrorInfo}
 import document.DatabaseInfo
 
 import play.core._
@@ -17,7 +17,7 @@ import scala.concurrent.Future
 
 
 class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter with MockFactory {
-  val testDbConfig = CouchDBConfiguration("id", "http://testhost/", "testDb", Some("syncDir"), false, false)
+  val testDbConfig = CouchDBConfiguration("id", "http://testhost/", "testDb", Some("syncDir"), None, false, false)
   
   "CouchPlayPlugin startup" should "automatically apply updates when in test mode" in {
   	Given("the plugin is configured with a CouchDB configuration and is started in test mode")
@@ -25,7 +25,7 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	val testSyncResult = new TestSyncResult(false)
   	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig)), Mode.Test, testSyncResult)
   	When("the plugin is started")
-    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound("Mock", "Mock"))
+    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound(CouchErrorInfo("Mock", "Mock")))
   	(plugin.couchMock.addDb _) expects ("testDb")
   	(plugin.dbMock.info _) expects () returning Future.successful(DatabaseInfo())
   	plugin.onStart()
@@ -39,7 +39,7 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	val testSyncResult = new TestSyncResult(false)
   	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig.copy(autoApplyDev = true))), Mode.Dev, testSyncResult)
   	When("the plugin is started")
-    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound("Mock", "Mock"))
+    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound(CouchErrorInfo("Mock", "Mock")))
   	(plugin.couchMock.addDb _) expects ("testDb")
   	(plugin.dbMock.info _) expects () returning Future.successful(DatabaseInfo())
   	plugin.onStart()
@@ -53,7 +53,7 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	val testSyncResult = new TestSyncResult(false)
   	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig.copy(autoApplyProd = true))), Mode.Prod, testSyncResult)
   	When("the plugin is started")
-    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound("Mock", "Mock"))
+    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound(CouchErrorInfo("Mock", "Mock")))
   	(plugin.couchMock.addDb _) expects ("testDb")
   	(plugin.dbMock.info _) expects () returning Future.successful(DatabaseInfo())
   	plugin.onStart()
@@ -99,7 +99,7 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	Given("the plugin is configured with a CouchDB configuration and is started in prod mode")
   	val testSyncResult = new TestSyncResult(false)
   	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig)), Mode.Prod, testSyncResult)
-    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound("Mock", "Mock"))
+    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound(CouchErrorInfo("Mock", "Mock")))
   	When("the plugin is started")
   	val exception = intercept[RemoteDBDoesntExist] {
   		plugin.onStart()
@@ -114,7 +114,7 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
   	Given("the plugin is configured with a CouchDB configuration and is started in dev mode")
   	val testSyncResult = new TestSyncResult(false)
   	val plugin = new CouchPlayPlugin(CouchConfiguration(Map("id" -> testDbConfig)), Mode.Dev, testSyncResult)
-    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound("Mock", "Mock"))
+    (plugin.dbMock.info _) expects () returning Future.failed(DatabaseNotFound(CouchErrorInfo("Mock", "Mock")))
   	When("the plugin is started")
   	val exception = intercept[RemoteDBDoesntExist] {
   		plugin.onStart()
@@ -139,10 +139,14 @@ class CouchPlayPluginSpec extends FlatSpec with ShouldMatchers with GivenWhenThe
     def couchConfig = config
     def appMode = mode
     def testSync(localDir: String, db: CouchDatabase): MultiMatchResult = testSyncResult
-    def couch(host: String): CouchHost = couchMock
+    def loadCoach: CouchDBLoader = new CouchDBLoader(){
+      def db(id: String) = dbMock
+      def host(id: String) = couchMock
+    }
     val couchMock = mock[CouchHost]
     val dbMock = mock[CouchDatabase]
-    (couchMock.db _) expects ("testDb") returning dbMock anyNumberOfTimes
+    (couchMock.url _) expects () returning "url" anyNumberOfTimes()
+    (dbMock.url _) expects () returning "url" anyNumberOfTimes
   }
 
   class TestSyncResult(matches: Boolean) extends collection.SeqProxy[SingleMatchResult] with MultiMatchResult {

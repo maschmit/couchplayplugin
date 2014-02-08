@@ -26,11 +26,11 @@ Note to use this plugin, you need to add a conf/play.plugins file to your app th
 */
 class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupport with BaseCouchPlayPlugin {
 
-  def couchConfig = CouchConfiguration(app.configuration)
+  lazy val couchConfig = CouchConfiguration(app.configuration)
+  lazy val loadCoach = new CouchConfigDBLoader(couchConfig)
   def appMode = app.mode
   def testSync(localDir: String, db: CouchDatabase): MultiMatchResult =
     Await.result(CouchSync(new File(localDir)).check(db), 1.second)
-  def couch(host: String): CouchHost = Couch.host(host)
 
 }
 
@@ -38,7 +38,7 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
   def couchConfig: CouchConfiguration
   def appMode: Mode.Mode
   def testSync(localDir: String, db: CouchDatabase): MultiMatchResult
-  def couch(host: String): CouchHost
+  def loadCoach: CouchDBLoader
 
   /**
    * Checks the evolutions state.
@@ -46,24 +46,24 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
   override def onStart() {
 
     couchConfig.db.values.filterNot(_.syncDir == None).foreach { dbConfig =>
-      val db = couch(dbConfig.host).db(dbConfig.database)
+      val db = loadCoach.db(dbConfig.id)
       syncDB(dbConfig, db)
       syncDocs(dbConfig, db)
     }
 
     def syncDB(dbConfig: CouchDBConfiguration, db: CouchDatabase) {
-      def createDB() = couch(dbConfig.host).addDb(dbConfig.database)
+      def createDB() = loadCoach.host(dbConfig.id).addDb(dbConfig.database)
       Await.result(db.info().recoverWith {
       	case _: DatabaseNotFound => appMode match {
           case Mode.Test => createDB()
           case Mode.Dev if dbConfig.autoApplyDev => createDB()
           case Mode.Prod if dbConfig.autoApplyProd => createDB()
           case Mode.Prod => {
-            Logger.warn("Your production database [" + dbConfig.id + "] needs to be created! \n\n")
+            Logger.warn(s"Your production database [${dbConfig.id}] needs to be created! (${db.url}) \n\n")
 
-            throw RemoteDBDoesntExist(dbConfig.id)
+            throw RemoteDBDoesntExist(dbConfig.id, db.url)
           }
-          case _ => throw RemoteDBDoesntExist(dbConfig.id)
+          case _ => throw RemoteDBDoesntExist(dbConfig.id, db.url)
         }
         db.info()
       }, 1.second)
@@ -79,7 +79,7 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
           case Mode.Dev if dbConfig.autoApplyDev => script.run()
           case Mode.Prod if dbConfig.autoApplyProd => script.run()
           case Mode.Prod => {
-            Logger.warn("Your production database [" + dbConfig.id + "] needs evolutions! \n\n" + script.map(_.destination.id).mkString)
+            Logger.warn("Your production database [" + dbConfig.id + "] needs evolutions! \n\n" + script.map(_.destination.url).mkString)
 
             throw RemoteDocsOutOfSync(dbConfig.id, script)
           }
@@ -98,23 +98,19 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
 
     request.path match {
 
-      case applyEvolutions(dbId) => {
-        Some {
-          val dbConfig = couchConfig.db(dbId)
-		  val db = Couch.host(dbConfig.host).db(dbConfig.database)
-		  Await.result(CouchSync(new File("conf/couch")).to(db), 1.second)
+      case applyEvolutions(dbId) => Some {
+    	  val db = loadCoach.db(dbId)
+		    Await.result(CouchSync(new File("conf/couch")).to(db), 1.second)
 	      sbtLink.forceReload()
 	      play.api.mvc.Results.Redirect(redirectUrl)
-        }
       }
 
-      case createDB(dbId) => {
-        Some {
-          val dbConfig = couchConfig.db(dbId)
-		  Await.result(Couch.host(dbConfig.host).addDb(dbConfig.database), 1.second)
-	      sbtLink.forceReload()
-	      play.api.mvc.Results.Redirect(redirectUrl)
-        }
+      case createDB(dbId) => Some {
+        val dbConfig = couchConfig.db(dbId)
+        val host = loadCoach.host(dbId)
+	      println(Await.result(host.addDb(dbConfig.database), 1.second))
+        sbtLink.forceReload()
+        play.api.mvc.Results.Redirect(redirectUrl)
       }
 
       case _ => None
@@ -130,13 +126,13 @@ trait BaseCouchPlayPlugin extends Plugin with HandleWebCommandSupport {
  *
  * @param db the database name
  */
-case class RemoteDBDoesntExist(db: String) extends PlayException.RichDescription(
+case class RemoteDBDoesntExist(db: String, url: String) extends PlayException.RichDescription(
   "Database '" + db + "' doesn't exist!",
   "A CouchDB database configured for this application doesn't exist.") {
 
   def subTitle = "The database must be created"
 
-  def content = ""
+  def content = s"Database must be created at $url"
 
   private val javascript = """
         document.location = '/@couchplay/create/%s?redirect=' + encodeURIComponent(location)

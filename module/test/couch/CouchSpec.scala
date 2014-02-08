@@ -10,7 +10,7 @@ import models._
 
 class CouchSpec extends FlatSpec with ShouldMatchers with GivenWhenThen {
 	val dbUrl = "http://localhost:5984/"
-	val couch = Couch.host(dbUrl)
+	val couch = Couch.host(dbUrl).user("admin", "admin")
 	val testDbName = "scala-couch-test"
 
 	"Couch.addDb" should "succeed if that db has just been removed" in {

@@ -25,7 +25,7 @@ trait CounterRepositoryComponent {
 	import play.api.libs.json._
 	import play.api.libs.functional.syntax._
 
-	val couchDb = Couch.load("default")
+	val couchDb = Couch.load.db("default")
 
 	implicit val counterWrites = new Writes[Counter] {
 	  def writes(c: Counter): JsValue = {

@@ -9,64 +9,65 @@ import scala.concurrent.Future
 import play.api.Play.current // TODO : implicitly pass in
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.ws._    // could make some wrapper to avoid using ws & json but it might not be worth it
+import WS.WSRequestHolder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : implicitly pass in
 
 
 object DocumentPointer {
-  def apply(db: CouchDatabase, id: String) = new DocumentPointer(db, id)
-  def apply(db: CouchDatabase, id: String, rev: String) = new DocumentRevisionPointer(db, id, rev)
+  def apply(request: WSRequestHolder) = new DocumentPointer(request)
+  def apply(request: WSRequestHolder, rev: String) = new DocumentRevisionPointer(request)
 }
 
-class DocumentPointer(val db: CouchDatabase, val id: String) {
+class DocumentPointer(private val request: WSRequestHolder) {
   import DocumentReaders._
   
-  def url: String = s"${db.url}/$id"
+  def url: String = request.url
 
   def create[T](body: JsValue): Future[DocumentUpdateResult] = 
-    WS.url(url).put(body.as[JsObject]).map( response => response.status match {
+    request.put(body.as[JsObject]).map( response => response.status match {
         case 201 => response.json.as[DocumentUpdateResult]
-        case _ => throw response.json.as[DocumentCreationFailed]
+        case _ => throw DocumentCreationFailed(response.json.as[CouchErrorInfo])
       })
 
   def get(): Future[Document] = 
-    WS.url(url).get().map( response => response.status match {
+    request.get().map( response => response.status match {
         case 200 => response.json.as[Document]
-        case 404 => throw response.json.as[DocumentNotFound]
-        case _ =>  throw response.json.as[GeneralCouchError]
+        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
+        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
       })
 
   def getOpt(): Future[Option[Document]] = 
-    WS.url(url).get().map( response => response.status match {
+    request.get().map( response => response.status match {
         case 200 => Some(response.json.as[Document])
         case 404 => None
-        case _ =>  throw response.json.as[GeneralCouchError]
+        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
       })
 
-  def rev(rev: String): DocumentRevisionPointer = DocumentPointer(db, id, rev)
+  def rev(rev: String): DocumentRevisionPointer = new DocumentRevisionPointer(request.withQueryString(("rev", rev)))
 }
 
-class DocumentRevisionPointer(val db: CouchDatabase, val id: String, val rev: String) {
+class DocumentRevisionPointer(private val request: WSRequestHolder) {
   import DocumentReaders._
 
-  def url: String = s"${db.url}/$id?rev=$rev"
+  def url: String = request.url
 
   def replace[T](body: JsValue): Future[DocumentUpdateResult] = 
-    WS.url(url).put(body.as[JsObject]).map( response => response.status match {
+    request.put(body.as[JsObject]).map( response => response.status match {
         case 201 => response.json.as[DocumentUpdateResult]
-        case _ => throw response.json.as[DocumentCreationFailed]
+        case _ => throw DocumentCreationFailed(response.json.as[CouchErrorInfo])
       })
 
   def delete() =
-    WS.url(url).delete().map( response => response.status match {
+    request.delete().map( response => response.status match {
         case 200 => response.json
-        case 404 => throw response.json.as[DocumentNotFound]
-        case _ =>  throw response.json.as[GeneralCouchError]
+        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
+        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
       })
 
   def get(): Future[Document] = 
-    WS.url(url).get().map( response => response.status match {
+    request.get().map( response => response.status match {
         case 200 => response.json.as[Document]
-        case 404 => throw response.json.as[DocumentNotFound]
-        case _ =>  throw response.json.as[GeneralCouchError]
+        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
+        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
       })
 }

@@ -3,6 +3,7 @@ package couch
 import sync.CouchDesignDocument
 
 import view._
+import test.DatabaseForEach
 
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
@@ -13,10 +14,7 @@ import scala.concurrent.duration._
 import play.api.libs.json._
 
 
-class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
-  val couch = Couch.host("http://localhost:5984/")
-  val testDbName = "scala-couch-test"
-  val testDb = couch.db(testDbName)
+class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with DatabaseForEach {
 
   val doc11 = Json.obj("_id" -> "1", "k" -> Seq(1, 1))
   val doc12 = Json.obj("_id" -> "2", "k" -> Seq(1, 2))
@@ -27,17 +25,12 @@ class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
   val mapReduceDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json").json
 
 
-  before {
-    Await.ready(couch.addDb(testDbName), 1.second)
-    docs.map(testDb.create(_)).map(f => Await.ready(f, 1.second))
-  }
-  after {
-    Await.result(couch.removeDb(testDbName), 1.second)
-  }
+  override def beforeWithDatabase() =
+    docs.map(testDb.create(_)).map(f => Await.result(f, 1.second))
 
   "CouchDesign.view" should "produce a result for map views" in {
     Given("a valid map view")
-    Await.ready(testDb.create("_design/test", mapDesign), 1.second)
+    Await.result(testDb.create("_design/test", mapDesign), 1.second)
     When("the view is requested plainly")
     val result = Await.result(testDb.design("test").view("add").get, 1.second)
     Then("the result should be a map result")

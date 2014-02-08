@@ -2,6 +2,7 @@ package couch
 
 import sync.CouchDesignDocument
 import sync._
+import test.DatabaseForEach
 
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
@@ -15,21 +16,11 @@ import play.api.libs.json._
 import java.io.File
 
 
-class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
-  val couch = Couch.host("http://localhost:5984/")
-  val testDbName = "scala-couch-test"
-  val testDb = couch.db(testDbName)
-  val docPtr = testDb.doc("docId")
+class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with DatabaseForEach {
+  def docPtr = testDb.doc("docId")
 
   val mapDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapDoc.json").json
   val mapReduceDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json").json
-
-  before {
-    Await.ready(couch.addDb(testDbName), 1.second)
-  }
-  after {
-    Await.result(couch.removeDb(testDbName), 1.second)
-  }
 
   "CouchSync(Json).check(DocumentPointer).run()" should "create a doc if it exists locally and not in the db" in {
     When("a new doc is synced")

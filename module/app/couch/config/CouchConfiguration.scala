@@ -15,6 +15,7 @@ object CouchConfiguration {
       dbHost <- dbConfig.getString("host")
       dbDatabase <- dbConfig.getString("database")
     } yield (dbName, new CouchDBConfiguration(dbName, dbHost, dbDatabase, dbConfig.getString("dir"),
+      dbConfig.getString("username").map((_, dbConfig.getString("password").getOrElse(null))),
 	  dbConfig.getBoolean("autoApplyDev").getOrElse(false), dbConfig.getBoolean("autoApplyProd").getOrElse(false)))
     CouchConfiguration(dbs.toMap)
   }
@@ -23,6 +24,6 @@ object CouchConfiguration {
 case class CouchConfiguration(db: Map[String, CouchDBConfiguration])
 
 case class CouchDBConfiguration(id: String, host: String, database: String, syncDir: Option[String],
-	autoApplyDev: Boolean, autoApplyProd: Boolean) {
+	credentials: Option[(String, String)], autoApplyDev: Boolean, autoApplyProd: Boolean) {
 	def checkSync = syncDir.isDefined
 }
