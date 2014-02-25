@@ -10,3 +10,5 @@ libraryDependencies ++= Seq(
 
 
 play.Project.playScalaSettings
+
+Keys.fork in Test := false

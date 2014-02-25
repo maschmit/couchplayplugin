@@ -1,5 +1,7 @@
 package couch
 
+import test.TestCouchHost
+
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
 
@@ -8,10 +10,9 @@ import scala.concurrent.duration._
 
 import models._
 
-class CouchSpec extends FlatSpec with ShouldMatchers with GivenWhenThen {
-	val dbUrl = "http://localhost:5984/"
-	val couch = Couch.host(dbUrl).user("admin", "admin")
-	val testDbName = "scala-couch-test"
+class CouchSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with TestCouchHost {
+	val couch = couchHost
+	val testDbName = testCouchConfig.database
 
 	"Couch.addDb" should "succeed if that db has just been removed" in {
 		When("test db is removed")
