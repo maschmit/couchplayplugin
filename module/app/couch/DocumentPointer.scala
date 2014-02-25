@@ -1,9 +1,7 @@
 package couch
 
 import document._
-import error._
-
-import ErrorReaders._
+import error.CouchErrors
 
 import scala.concurrent.Future
 import play.api.Play.current // TODO : implicitly pass in
@@ -21,26 +19,26 @@ object DocumentPointer {
 class DocumentPointer(private val request: WSRequestHolder) {
   import DocumentReaders._
   
-  def url: String = request.url
+  implicit def url: String = request.url
 
   def create[T](body: JsValue): Future[DocumentUpdateResult] = 
     request.put(body.as[JsObject]).map( response => response.status match {
         case 201 => response.json.as[DocumentUpdateResult]
-        case _ => throw DocumentCreationFailed(response.json.as[CouchErrorInfo])
+        case _ => throw CouchErrors("PUT", response.json).docCreationFailed
       })
 
   def get(): Future[Document] = 
     request.get().map( response => response.status match {
         case 200 => response.json.as[Document]
-        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
-        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
+        case 404 => throw CouchErrors("GET", response.json).docNotFound
+        case _ =>  throw CouchErrors("GET", response.json).general
       })
 
   def getOpt(): Future[Option[Document]] = 
     request.get().map( response => response.status match {
         case 200 => Some(response.json.as[Document])
         case 404 => None
-        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
+        case _ =>  throw CouchErrors("GET", response.json).general
       })
 
   def rev(rev: String): DocumentRevisionPointer = new DocumentRevisionPointer(request.withQueryString(("rev", rev)))
@@ -49,25 +47,25 @@ class DocumentPointer(private val request: WSRequestHolder) {
 class DocumentRevisionPointer(private val request: WSRequestHolder) {
   import DocumentReaders._
 
-  def url: String = request.url
+  implicit def url: String = request.url
 
   def replace[T](body: JsValue): Future[DocumentUpdateResult] = 
     request.put(body.as[JsObject]).map( response => response.status match {
         case 201 => response.json.as[DocumentUpdateResult]
-        case _ => throw DocumentCreationFailed(response.json.as[CouchErrorInfo])
+        case _ => throw CouchErrors("PUT", response.json).docCreationFailed
       })
 
   def delete() =
     request.delete().map( response => response.status match {
         case 200 => response.json
-        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
-        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
+        case 404 => throw CouchErrors("DELETE", response.json).docNotFound
+        case _ =>  throw CouchErrors("DELETE", response.json).general
       })
 
   def get(): Future[Document] = 
     request.get().map( response => response.status match {
         case 200 => response.json.as[Document]
-        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
-        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
+        case 404 => throw CouchErrors("GET", response.json).docNotFound
+        case _ =>  throw CouchErrors("GET", response.json).general
       })
 }

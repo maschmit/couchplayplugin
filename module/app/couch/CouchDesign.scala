@@ -1,9 +1,8 @@
 package couch
 
 import view._
-import error._
+import error.CouchErrors
 
-import ErrorReaders._
 import ViewReaders._
 import Couch._
 
@@ -21,7 +20,7 @@ class CouchDesign(val database: CouchDatabase, val name: String) {
 class ViewQueryBuilder(val design: CouchDesign, val name: String,
     val group: Option[Boolean] = None, val reduce: Option[Boolean] = None) {
 
-  def url = s"${design.url}/_view/$name$params"
+  implicit def url = s"${design.url}/_view/$name$params"
   def params = paramString(List(("group", group), ("reduce", reduce)))
 
   def grouped = new ViewQueryBuilder(design, name, Some(true), reduce)
@@ -39,8 +38,8 @@ class ViewQueryBuilder(val design: CouchDesign, val name: String,
   def get(): Future[ViewResult] = 
     WS.url(url).get().map( response => response.status match {
         case 200 => response.json.as[ViewResult]
-        case 404 => throw DocumentNotFound(response.json.as[CouchErrorInfo])
-        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
+        case 404 => throw CouchErrors("GET", response.json).docNotFound
+        case _ =>  throw CouchErrors("GET", response.json).general
       })
 
   private def paramString(params: Seq[(String, Option[Any])]) = "?" + params

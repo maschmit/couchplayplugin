@@ -1,7 +1,7 @@
 package couch
 
 import document._
-import error._
+import error.CouchErrors
 import config.CouchConfiguration
 
 import scala.concurrent.Future
@@ -34,7 +34,6 @@ trait CouchDatabase{
 
 /** Api entry-point for building requests on a CouchDB instance */
 object Couch {
-  import ErrorReaders._
   import DocumentReaders._
 
   /** Specify a host to start building a request
@@ -74,7 +73,7 @@ object Couch {
   class BasicCouchHost(private val hostRequest: RequestGenerator) extends CouchHost {
     private def dbRequest(name: String) = hostRequest(List(name))
 
-    def url = hostRequest(Nil).url
+    implicit def url = hostRequest(Nil).url
 
     def removeDb(name: String): Future[Boolean] =
       dbRequest(name).delete().map( response =>
@@ -92,13 +91,13 @@ object Couch {
   }
 
   class BasicCouchDatabase(private val dbRequestGen: RequestGenerator) extends CouchDatabase {
-  	def url = dbRequest.url
+  	implicit def url = dbRequest.url
     private def dbRequest = dbRequestGen(Nil)
 
   	def create(body: JsValue): Future[DocumentUpdateResult] = 
   	  dbRequest.post(body.as[JsObject]).map( response => response.status match {
         case 201 => response.json.as[DocumentUpdateResult]
-        case _ => throw DocumentCreationFailed(response.json.as[CouchErrorInfo])
+        case _ => throw CouchErrors("POST", response.json).docCreationFailed
       })
 
   	def create[T](id: String, body: JsValue): Future[DocumentUpdateResult] = 
@@ -122,8 +121,8 @@ object Couch {
     def info(): Future[DatabaseInfo] = 
       dbRequest.get().map( response => response.status match {
         case 200 => DatabaseInfo()
-        case 404 => throw DatabaseNotFound(response.json.as[CouchErrorInfo])
-        case _ =>  throw GeneralCouchError(response.json.as[CouchErrorInfo])
+        case 404 => throw CouchErrors("GET", response.json).dbNotFound
+        case _ => throw CouchErrors("GET", response.json).general
       })
   }
 }
