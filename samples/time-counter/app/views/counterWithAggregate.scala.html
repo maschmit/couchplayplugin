@@ -1,9 +1,0 @@
-@(incrementCounterForm: Form[Time], counter: CounterWithAggregate)
-
-<b>@counter.counter.name ,</b>
-
-Time = @counter.time
-
-@helper.form(action = routes.CountersController.incrementCounter(counter.id)) {
-    @helper.inputText(incrementCounterForm("minutes"), 'size -> 10)
-}
