@@ -9,11 +9,15 @@ What this does
 3. Create, Replace, Delete and Get operations
 4. Update your database design and static documents from source control as evolutions does for sql DBs
 
-Getting started
----------------
+Prerequisites
+-------------
 
 1. Get play framework (http://www.playframework.com/) - (2.2.0 tested)
 2. Install CouchDB - packages available on linux / (http://couchdb.apache.org/) - (1.2.0 & 1.4.0 tested)
+
+Install module from source
+--------------------------
+
 3. Get the couchplayplugin source `git clone https://github.com/platy/couchplayplugin.git`
 4. `cd couchplayplugin/module`
 5. Run the tests and build the module to your local repository `play test publish-local`
@@ -30,6 +34,28 @@ WARNING - UI is crap and doesn't demonstrate well the power of couchdb or play
 3. Go to http://localhost:9000/
 4. You will be asked to create the database and sync
 5. You can then create counters and add to them
+
+Add to your play project
+------------------------
+
+build.sbt:
+
+    resolvers += "CouchPlay Github" at "https://raw.github.com/platy/couchplayplugin/mvn-repo/"
+    libraryDependencies += "couch-play-plugin" % "couch-play-plugin_2.10" % "0.1"
+
+conf/play.plugins: (assuming you want to use the document sync)
+
+    451:couch.CouchPlayPlugin
+
+conf/application.conf:
+
+    couch.db.default.host="http://localhost:5984/"
+    couch.db.default.database="dbname"
+    couch.db.default.dir="conf/couch"
+
+conf/couch/: Add json documents to sync - must have .json extension, docs in a _design/ subdir will become design docs
+
+I don't currently have documentation for using the API but have a look at the sample usage - https://github.com/platy/couchplayplugin/blob/master/samples/time-counter/app/repositories/CounterRepositoryComponent.scala
 
 Compatibility
 -------------
