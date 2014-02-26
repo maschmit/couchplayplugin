@@ -1,6 +1,6 @@
 name := "couch-play-plugin"
 
-version := "0.1"
+version := "0.2-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test",
