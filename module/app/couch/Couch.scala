@@ -5,7 +5,6 @@ import error.CouchErrors
 import config.CouchConfiguration
 
 import scala.concurrent.Future
-import play.api.Play.current // TODO : implicitly pass in
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.ws._    // could make some wrapper to avoid using ws & json but it might not be worth it
 import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : implicitly pass in
