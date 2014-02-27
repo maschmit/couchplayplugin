@@ -4,31 +4,30 @@ import document._
 import error.CouchErrors
 import config.CouchConfiguration
 
-import scala.concurrent.Future
+import scala.concurrent.{Future,ExecutionContext}
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.ws._    // could make some wrapper to avoid using ws & json but it might not be worth it
-import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : implicitly pass in
 import play.api.mvc.Results // TODO : don't use this
 
 
 trait CouchHost {
   def url: String
-  def removeDb(name: String): Future[Boolean]
-  def addDb(name: String): Future[Boolean]
+  def removeDb(name: String)(implicit executor: ExecutionContext): Future[Boolean]
+  def addDb(name: String)(implicit executor: ExecutionContext): Future[Boolean]
   def db(name: String): CouchDatabase
   def user(user: String, password: String): CouchHost
 }
 
 trait CouchDatabase{
   def url: String
-  def create(body: JsValue): Future[DocumentUpdateResult]
-  def create[T](id: String, body: JsValue): Future[DocumentUpdateResult]
-  def replace[T](head: DocumentHeader, body: JsValue): Future[DocumentUpdateResult]
-  def delete(docHead: DocumentHeader): Future[JsValue]
-  def get(id: String): Future[Document]
+  def create(body: JsValue)(implicit executor: ExecutionContext): Future[DocumentUpdateResult]
+  def create[T](id: String, body: JsValue)(implicit executor: ExecutionContext): Future[DocumentUpdateResult]
+  def replace[T](head: DocumentHeader, body: JsValue)(implicit executor: ExecutionContext): Future[DocumentUpdateResult]
+  def delete(docHead: DocumentHeader)(implicit executor: ExecutionContext): Future[JsValue]
+  def get(id: String)(implicit executor: ExecutionContext): Future[Document]
   def doc(id: String): DocumentPointer
   def design(ddName: String): CouchDesign
-  def info(): Future[DatabaseInfo]
+  def info()(implicit executor: ExecutionContext): Future[DatabaseInfo]
 }
 
 /** Api entry-point for building requests on a CouchDB instance */
@@ -74,11 +73,11 @@ object Couch {
 
     implicit def url = hostRequest(Nil).url
 
-    def removeDb(name: String): Future[Boolean] =
+    def removeDb(name: String)(implicit executor: ExecutionContext): Future[Boolean] =
       dbRequest(name).delete().map( response =>
       	(response.json \ "ok").asOpt[Boolean].getOrElse(false) )
 
-	  def addDb(name: String): Future[Boolean] =
+	  def addDb(name: String)(implicit executor: ExecutionContext): Future[Boolean] =
       dbRequest(name).put(Results.EmptyContent()).map( response =>
       	(response.json \ "ok").asOpt[Boolean].getOrElse(false) )
 
@@ -93,22 +92,22 @@ object Couch {
   	implicit def url = dbRequest.url
     private def dbRequest = dbRequestGen(Nil)
 
-  	def create(body: JsValue): Future[DocumentUpdateResult] = 
+  	def create(body: JsValue)(implicit executor: ExecutionContext): Future[DocumentUpdateResult] = 
   	  dbRequest.post(body.as[JsObject]).map( response => response.status match {
         case 201 => response.json.as[DocumentUpdateResult]
         case _ => throw CouchErrors("POST", response.json).docCreationFailed
       })
 
-  	def create[T](id: String, body: JsValue): Future[DocumentUpdateResult] = 
+  	def create[T](id: String, body: JsValue)(implicit executor: ExecutionContext): Future[DocumentUpdateResult] = 
       doc(id).create(body)
 
-    def replace[T](head: DocumentHeader, body: JsValue): Future[DocumentUpdateResult] = 
+    def replace[T](head: DocumentHeader, body: JsValue)(implicit executor: ExecutionContext): Future[DocumentUpdateResult] = 
       doc(head.id).rev(head.rev).replace(body)
 
-    def delete(docHead: DocumentHeader) =
+    def delete(docHead: DocumentHeader)(implicit executor: ExecutionContext) =
       doc(docHead.id).rev(docHead.rev).delete()
 
-  	def get(id: String): Future[Document] = 
+  	def get(id: String)(implicit executor: ExecutionContext): Future[Document] = 
   	  doc(id).get()
 
     def doc(id: String): DocumentPointer =
@@ -117,7 +116,7 @@ object Couch {
     def design(ddName: String) =
       new CouchDesign(this, ddName)
 
-    def info(): Future[DatabaseInfo] = 
+    def info()(implicit executor: ExecutionContext): Future[DatabaseInfo] = 
       dbRequest.get().map( response => response.status match {
         case 200 => DatabaseInfo()
         case 404 => throw CouchErrors("GET", response.json).dbNotFound

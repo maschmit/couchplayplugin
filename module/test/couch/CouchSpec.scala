@@ -7,6 +7,7 @@ import org.scalamock.scalatest.MockFactory
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import models._
 

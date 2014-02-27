@@ -2,7 +2,7 @@ package couch.test
 
 import couch.CouchDatabase
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Future, Await, ExecutionContext}
 import scala.concurrent.duration._
 import org.scalatest.{BeforeAndAfterEach, Suite}
 
@@ -10,6 +10,8 @@ import org.scalatest.{BeforeAndAfterEach, Suite}
   * The db is created when the testDb is first requested and is deleted after the test finishes
   */
 trait DatabaseForEach extends BeforeAndAfterEach with TestCouchHost { self: Suite =>
+  implicit private val executor: ExecutionContext = play.api.libs.concurrent.Execution.Implicits.defaultContext
+
   private val testDbName = testCouchConfig.database
 
   private var initialised = false

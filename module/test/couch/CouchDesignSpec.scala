@@ -12,6 +12,7 @@ import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
 import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with DatabaseForEach {
