@@ -1,9 +1,10 @@
-package couch
+package couch.plugin
 
-import config._
-import sync._
-import error.{DatabaseNotFound, CouchErrorInfo}
-import document.DatabaseInfo
+import couch._
+import couch.config._
+import couch.sync._
+import couch.error.{DatabaseNotFound, CouchErrorInfo}
+import couch.document.DatabaseInfo
 
 import play.core._
 import play.api._

@@ -1,8 +1,9 @@
-package couch
+package couch.plugin
 
-import error.DatabaseNotFound
-import config._
-import sync._
+import couch._
+import couch.error.DatabaseNotFound
+import couch.config._
+import couch.sync._
 
 
 import play.core._
@@ -19,11 +20,6 @@ import scala.concurrent.duration._
 
 import java.io.File
 
-/*
-Note to use this plugin, you need to add a conf/play.plugins file to your app that looks like
-
-451:couch.CouchPlayPlugin
-*/
 class CouchPlayPlugin(app: Application) extends Plugin with HandleWebCommandSupport with BaseCouchPlayPlugin {
 
   lazy val couchConfig = CouchConfiguration(app.configuration)
