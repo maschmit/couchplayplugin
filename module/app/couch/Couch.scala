@@ -114,7 +114,7 @@ object Couch {
       new DocumentPointer(dbRequestGen(List(id)))
 
     def design(ddName: String) =
-      new CouchDesign(this, ddName)
+      new CouchDesign((path: List[String]) => dbRequestGen("_design" :: ddName :: path))
 
     def info()(implicit executor: ExecutionContext): Future[DatabaseInfo] = 
       dbRequest.get().map( response => response.status match {
