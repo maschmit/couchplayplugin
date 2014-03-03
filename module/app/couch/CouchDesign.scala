@@ -24,28 +24,28 @@ class CouchDesign(private val designRequestGen: RequestGenerator) {
   def view(name: String) = new ViewQueryBuilder[ViewResult](designRequestGen("_view" :: name :: Nil))
 }
 
-class ViewQueryBuilder[T <: ViewResult](val designRequest: WS.WSRequestHolder,
+class ViewQueryBuilder[T <: ViewResult](private val viewRequest: WS.WSRequestHolder,
     val group: Option[Boolean] = None, val reduce: Option[Boolean] = None) {
 
   implicit def url: String = request.url
       
-  private def request = designRequest.withQueryString(Seq(("group", group), ("reduce", reduce))
+  private def request = viewRequest.withQueryString(Seq(("group", group), ("reduce", reduce))
     .collect { case (name, Some(value)) => (name, value.toString) }: _*)
 
   /** Groups the reduction by key for a reduce query (fails for a view query) */
-  def grouped = new ViewQueryBuilder[T](designRequest, Some(true), reduce)
+  def grouped = new ViewQueryBuilder[T](viewRequest, Some(true), reduce)
   
   /** Sets the reduce=false parameter on the view request.
     *
     * A Future[MapViewResult] is returned when get() is called
     */
-  def notReduced = new ViewQueryBuilder[MapViewResult](designRequest, group, Some(false))
+  def notReduced = new ViewQueryBuilder[MapViewResult](viewRequest, group, Some(false))
 
   /** Sets the reduce=true parameter on the view request.
     *
     * Either a Future[ReduceViewResult] is returned or a CouchError is thrown
     */
-  def reduced = new ViewQueryBuilder[ReduceViewResult](designRequest, group, Some(true))
+  def reduced = new ViewQueryBuilder[ReduceViewResult](viewRequest, group, Some(true))
 
   /** Perform view query asyncronously */
   def get(): Future[T] = 
