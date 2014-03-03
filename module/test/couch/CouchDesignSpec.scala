@@ -49,37 +49,31 @@ class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen wi
     Await.ready(testDb.create("_design/test", mapReduceDesign), 1.second)
     When("the view is requested with noReduce")
     val result = Await.result(testDb.design("test").view("add").notReduced.get, 1.second)
-    Then("the result should be a map result")
-    var mapresult = result.asInstanceOf[MapViewResult]
-    And("the result should have the correct values")
-    mapresult.rowCount should be (3)
-    mapresult.offset should be (0)
-    mapresult.rows(0) should be (MapViewElement("1", Json.arr(1, 1), JsNumber(1)))
-    mapresult.rows(1) should be (MapViewElement("2", Json.arr(1, 2), JsNumber(1)))
-    mapresult.rows(2) should be (MapViewElement("3", Json.arr(2, 1), JsNumber(1)))
+    Then("the result should have the correct values")
+    result.rowCount should be (3)
+    result.offset should be (0)
+    result.rows(0) should be (MapViewElement("1", Json.arr(1, 1), JsNumber(1)))
+    result.rows(1) should be (MapViewElement("2", Json.arr(1, 2), JsNumber(1)))
+    result.rows(2) should be (MapViewElement("3", Json.arr(2, 1), JsNumber(1)))
   }
 
   it should "produce a result for reduce views" in {
     Given("a valid map and reduce view")
     Await.ready(testDb.create("_design/test", mapReduceDesign), 1.second)
     When("the view is requested plainly")
-    val result = Await.result(testDb.design("test").view("add").get, 1.second)
-    Then("the result should be a reduce result")
-    var mapresult = result.asInstanceOf[ReduceViewResult]
-    And("the result should have the correct values")
-    mapresult.rows(0) should be (ReduceViewElement(JsNull, JsNumber(3)))
+    val result = Await.result(testDb.design("test").view("add").reduced.get, 1.second)
+    Then("the result should have the correct values")
+    result.rows(0) should be (ReduceViewElement(JsNull, JsNumber(3)))
   }
 
   it should "optionally be able to request grouping for reduce views" in {
     Given("a valid map and reduce view")
     Await.ready(testDb.create("_design/test", mapReduceDesign), 1.second)
     When("the view is requested grouped")
-    val result = Await.result(testDb.design("test").view("add").grouped.get, 1.second)
-    Then("the result should be a reduce result")
-    var mapresult = result.asInstanceOf[ReduceViewResult]
-    And("the result should have the correct values")
-    mapresult.key(Json.arr(1, 1)) should be (ReduceViewElement(Json.arr(1, 1), JsNumber(1)))
-    mapresult.key(Json.arr(1, 2)) should be (ReduceViewElement(Json.arr(1, 2), JsNumber(1)))
-    mapresult.key(Json.arr(2, 1)) should be (ReduceViewElement(Json.arr(2, 1), JsNumber(1)))
+    val result = Await.result(testDb.design("test").view("add").grouped.reduced.get, 1.second)
+    Then("the result should have the correct values")
+    result.key(Json.arr(1, 1)) should be (ReduceViewElement(Json.arr(1, 1), JsNumber(1)))
+    result.key(Json.arr(1, 2)) should be (ReduceViewElement(Json.arr(1, 2), JsNumber(1)))
+    result.key(Json.arr(2, 1)) should be (ReduceViewElement(Json.arr(2, 1), JsNumber(1)))
   }
 }

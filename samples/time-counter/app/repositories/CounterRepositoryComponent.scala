@@ -45,13 +45,13 @@ trait CounterRepositoryComponent {
     import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
     def counters: Future[Seq[CounterWithAggregate]] = 
-      couchDb.design("counters").view("counters").grouped.get().map(_.rows.map {
-          case ReduceViewElement(key, value) => for {
-            k <- key.asOpt[String]
-            name <- (value \ "name").asOpt[String]
-            minutes <- (value \ "minutes").asOpt[Int]
-          } yield new CounterWithAggregate(k, Counter(name), TimeCounter(minutes))
-      }.collect { case Some(v) => v })
+      couchDb.design("counters").view("counters").grouped.reduced.get().map(result => for {
+        element <- result.rows
+        k <- element.key.asOpt[String]
+        name <- (element.value \ "name").asOpt[String]
+        minutes <- (element.value \ "minutes").asOpt[Int]
+      } yield new CounterWithAggregate(k, Counter(name), TimeCounter(minutes))
+      )
 
     def add(newCounter: Counter): Future[CounterId] = 
       couchDb.create(Json.toJson(newCounter)).map(created =>

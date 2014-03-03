@@ -14,30 +14,30 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext // TODO : imp
 class CouchDesign(val database: CouchDatabase, val name: String) {
   def url = s"${database.url}/_design/$name"
 
-  def view(vName: String) = new ViewQueryBuilder(this, vName)
+  def view(vName: String) = new ViewQueryBuilder[ViewResult](this, vName)
 }
 
-class ViewQueryBuilder(val design: CouchDesign, val name: String,
+class ViewQueryBuilder[T <: ViewResult](val design: CouchDesign, val name: String,
     val group: Option[Boolean] = None, val reduce: Option[Boolean] = None) {
 
   implicit def url = s"${design.url}/_view/$name$params"
   def params = paramString(List(("group", group), ("reduce", reduce)))
 
-  def grouped = new ViewQueryBuilder(design, name, Some(true), reduce)
+  def grouped = new ViewQueryBuilder[T](design, name, Some(true), reduce)
   
   /** Sets the reduce=false parameter on the view request - this should mean
-    * that either a Future[MapViewResult] is returned
+    * that a Future[MapViewResult] is returned
     */
-  def notReduced = new ViewQueryBuilder(design, name, group, Some(false))
+  def notReduced = new ViewQueryBuilder[MapViewResult](design, name, group, Some(false))
 
   /** Sets the reduce=true parameter on the view request - this should mean
     * that either a Future[ReduceViewResult] is returned or a CouchError is thrown
     */
-  def reduced = new ViewQueryBuilder(design, name, group, Some(true))
+  def reduced = new ViewQueryBuilder[ReduceViewResult](design, name, group, Some(true))
 
-  def get(): Future[ViewResult] = 
+  def get(): Future[T] = 
     WS.url(url).get().map( response => response.status match {
-        case 200 => response.json.as[ViewResult]
+        case 200 => response.json.as[ViewResult].asInstanceOf[T]
         case 404 => throw CouchErrors("GET", response.json).docNotFound
         case _ =>  throw CouchErrors("GET", response.json).general
       })
