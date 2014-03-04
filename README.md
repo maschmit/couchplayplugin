@@ -41,8 +41,7 @@ Add to your play project
 
 build.sbt:
 
-    resolvers += "CouchPlay Github" at "https://raw.github.com/platy/couchplayplugin/mvn-repo/"
-    libraryDependencies += "couch-play-plugin" % "couch-play-plugin_2.10" % "0.1"
+    libraryDependencies += "couch-play-plugin" % "couch-play-plugin_2.10" % "0.2"
 
 conf/play.plugins: (assuming you want to use the document sync)
 
