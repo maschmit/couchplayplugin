@@ -8,6 +8,7 @@ What this does
 2. Uses the play builtin async Ws request api (all operations are non-blocking)
 3. Create, Replace, Delete and Get operations
 4. Update your database design and static documents from source control as evolutions does for sql DBs
+5. Directory -> json mapper. Js functions in design documents can be their own .js files getting editor syntax highlighting and line diffs for commits.
 
 Prerequisites
 -------------

@@ -1,8 +1,0 @@
-{
-   "views": {
-       "counters": {
-           "map": "function(doc){  if(doc.type === \"counter\") { emit(doc._id, {name: doc.name}) } else if(doc.type === \"increment\") emit(doc.counterId, {minutes: doc.minutes}) }",
-           "reduce": "function(key, values, rereduce) { \nvar minutes = 0;\n var name = undefined;\n for(i in values) { var v = values[i];\n if(v.hasOwnProperty('minutes'))\n minutes += v.minutes;\n if(v.hasOwnProperty('name'))\n name = v.name; \n}\n return {\"name\": name, \"minutes\": minutes}; }"
-       }
-   }
-}

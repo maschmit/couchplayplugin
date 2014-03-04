@@ -13,6 +13,8 @@ import scala.concurrent.duration._
 import play.api.libs.json._
 
 class CouchDesignDocumentSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfter {
+  val testRoot = "test/couch/testfiles/"
+  def testPath(path: String) = testRoot + path
 
   val mapReduceDesign = CouchDesignDocument(Json.obj(
     "views" -> Json.obj(
@@ -29,7 +31,7 @@ class CouchDesignDocumentSpec extends FlatSpec with ShouldMatchers with GivenWhe
 
   "CouchDesignDocument.read" should "read a design document from a local file" in {
     When("the document is read")
-    val doc = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json")
+    val doc = CouchDesignDocument.read(testPath("designdocs/_design/mapReduceDoc.json"))
     Then("the result should be a design document")
     (doc.isInstanceOf[CouchDesignDocument]) should be (true)
     And("the result should have the correct values")

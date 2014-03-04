@@ -17,10 +17,15 @@ import java.io.File
 
 
 class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with DatabaseForEach {
+  val testRoot = "test/couch/testfiles/"
+  def testPath(path: String) = testRoot + path
+  val testFileDir = new File(testRoot)
+  def testFile(path: String) = new File(testFileDir, path)
+
   def docPtr = testDb.doc("docId")
 
-  val mapDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapDoc.json").json
-  val mapReduceDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json").json
+  val mapDesign = CouchDesignDocument.read(testPath("designdocs/_design/mapDoc.json")).json
+  val mapReduceDesign = CouchDesignDocument.read(testPath("designdocs/_design/mapReduceDoc.json")).json
 
   "CouchSync(Json).check(DocumentPointer).run()" should "create a doc if it exists locally and not in the db" in {
     When("a new doc is synced")
@@ -54,7 +59,7 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
 
   "CouchSync(directoryPath).check(Database).run()" should "create docs if they exist locally and not in the db" in {
     When("a new dir is synced")
-    Await.result(CouchSync(new File("test/couch/testfiles/_design")).check(testDb).flatMap(_.run()), 1.second)
+    Await.result(CouchSync(testFile("designdocs/_design")).check(testDb).flatMap(_.run()), 1.second)
     Then("the docs should exist")
     val doc1 = Await.result(testDb.get("mapDoc"), 1.second)
     doc1.body should be (mapDesign)
@@ -64,7 +69,7 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
 
   it should "sync files in _design/ to design documents" in {
     When("a new dir contating _design dir is synced")
-    val checkRes = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
+    val checkRes = Await.result(CouchSync(testFile("designdocs")).check(testDb), 1.second)
     Await.result(checkRes.run(), 1.second)
     Then("the docs should exist")
     val doc1 = Await.result(testDb.get("_design/mapDoc"), 1.second)
@@ -100,16 +105,16 @@ class CouchSyncSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with
 
   "CouchSync(directoryPath).check(Database)" should "not match if they exist locally and not in the db" in {
     When("a new dir is checked")
-    val result = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
+    val result = Await.result(CouchSync(testFile("designdocs")).check(testDb), 1.second)
     Then("the result should be not matched")
     result should not be a ('match)
   }
 
   it should "match if the files have already been synced" in {
     Given("the dir is already synced")
-    Await.result(CouchSync(new File("test/couch/testfiles")).to(testDb), 1.second)
+    Await.result(CouchSync(testFile("designdocs")).to(testDb), 1.second)
     When("the dir is checked")
-    val result = Await.result(CouchSync(new File("test/couch/testfiles")).check(testDb), 1.second)
+    val result = Await.result(CouchSync(testFile("designdocs")).check(testDb), 1.second)
     Then("the result should be matched")
     result should be a ('match)
   }

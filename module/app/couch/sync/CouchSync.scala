@@ -3,6 +3,7 @@ package couch.sync
 import couch.DocumentPointer
 import couch.CouchDatabase
 import couch.document._
+import couch.directorymapper.JsonFSMapper
 
 import play.api.libs.json._
 import scala.concurrent.Future
@@ -31,7 +32,7 @@ object CouchSync {
       }
   }
 
-  class FileCouchDocumentSync(file: File) extends JsonCouchDocumentSync(getJson(file)) {
+  class FileCouchDocumentSync(file: File) extends JsonCouchDocumentSync(JsonFSMapper.load(file)) {
     override def sourceName = file.getPath
   }
 
@@ -42,7 +43,7 @@ object CouchSync {
 
     private def checkSeperate(db: CouchDatabase): Seq[Future[SingleMatchResult]] = 
       dir.listFiles.flatMap {
-        case file if file.isFile && file.getName().endsWith(".json") =>
+        case file if file.getName().endsWith(".json") =>
           Seq(new FileCouchDocumentSync(file).check(db.doc(jsonFileName(file.getName))))
         case subdir if subdir.isDirectory =>
           new DirectoryCouchDocumentSetSync(Some(subRoot(subdir.getName)), subdir).checkSeperate(db)

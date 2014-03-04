@@ -16,14 +16,16 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 class CouchDesignSpec extends FlatSpec with ShouldMatchers with GivenWhenThen with DatabaseForEach {
+  val testRoot = "test/couch/testfiles/"
+  def testPath(path: String) = testRoot + path
 
   val doc11 = Json.obj("_id" -> "1", "k" -> Seq(1, 1))
   val doc12 = Json.obj("_id" -> "2", "k" -> Seq(1, 2))
   val doc21 = Json.obj("_id" -> "3", "k" -> Seq(2, 1))
   val docs = Seq(doc11, doc12, doc21)
 
-  val mapDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapDoc.json").json
-  val mapReduceDesign = CouchDesignDocument.read("test/couch/testfiles/_design/mapReduceDoc.json").json
+  val mapDesign = CouchDesignDocument.read(testPath("designdocs/_design/mapDoc.json")).json
+  val mapReduceDesign = CouchDesignDocument.read(testPath("designdocs/_design/mapReduceDoc.json")).json
 
 
   override def beforeWithDatabase() =
